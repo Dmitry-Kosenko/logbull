@@ -102,7 +102,7 @@ func Test_ExecuteQueryForProject_WithNanosecondPrecision_MaintainsProperDESCOrde
 		verifyDescOrderingWithinPage(t, pageResult.Logs, pageIndex)
 	}
 
-	verifyDescOrderingAcrossPages(t, allLogsByPage, logCount, pageSize)
+	verifyDescOrderingAcrossPages(t, allLogsByPage)
 }
 
 func verifyDescOrderingWithinPage(t *testing.T, logs []logs_core.LogItemDTO, pageIndex int) {
@@ -135,7 +135,7 @@ func verifyDescOrderingWithinPage(t *testing.T, logs []logs_core.LogItemDTO, pag
 	}
 }
 
-func verifyDescOrderingAcrossPages(t *testing.T, allLogsByPage [][]logs_core.LogItemDTO, logCount, pageSize int) {
+func verifyDescOrderingAcrossPages(t *testing.T, allLogsByPage [][]logs_core.LogItemDTO) {
 	expectedSequencesDescOrder := [][]int{
 		{20, 19, 18, 17, 16},
 		{15, 14, 13, 12, 11},

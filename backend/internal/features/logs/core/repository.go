@@ -488,74 +488,32 @@ func (r *LogCoreRepository) GetProjectLogStats(projectID uuid.UUID) (*ProjectLog
 		"projectId", projectID.String(),
 		"totalLogs", statsSearchResponse.Aggregations.TotalLogs.Value,
 		"totalSizeBytes", statsSearchResponse.Aggregations.TotalSizeBytes.Value,
-		"oldestLogValue", statsSearchResponse.Aggregations.OldestLog.Value,
-		"oldestLogValueAsString", statsSearchResponse.Aggregations.OldestLog.ValueAsString,
-		"newestLogValue", statsSearchResponse.Aggregations.NewestLog.Value,
-		"newestLogValueAsString", statsSearchResponse.Aggregations.NewestLog.ValueAsString)
+		"oldestLogNanos", statsSearchResponse.Aggregations.OldestLog.Value,
+		"newestLogNanos", statsSearchResponse.Aggregations.NewestLog.Value)
 
 	stats := &ProjectLogStats{
 		TotalLogs:   statsSearchResponse.Aggregations.TotalLogs.Value,
 		TotalSizeMB: statsSearchResponse.Aggregations.TotalSizeBytes.Value / (1024 * 1024), // Convert bytes to MB
 	}
 
-	// Parse oldest timestamp if available
-	if statsSearchResponse.Aggregations.OldestLog.ValueAsString != "" {
-		r.logger.Info("Parsing oldest log from ValueAsString",
-			"projectId", projectID.String(),
-			"valueAsString", statsSearchResponse.Aggregations.OldestLog.ValueAsString)
-
-		if oldestTime, err := time.Parse(time.RFC3339Nano, statsSearchResponse.Aggregations.OldestLog.ValueAsString); err == nil {
-			stats.OldestLogTime = oldestTime.UTC()
-			r.logger.Info("Successfully parsed oldest log time from ValueAsString",
-				"projectId", projectID.String(),
-				"parsedTime", stats.OldestLogTime.Format(time.RFC3339Nano))
-		} else {
-			r.logger.Error("Failed to parse oldest log time from ValueAsString",
-				"projectId", projectID.String(),
-				"valueAsString", statsSearchResponse.Aggregations.OldestLog.ValueAsString,
-				"error", err.Error())
-		}
-	} else if statsSearchResponse.Aggregations.OldestLog.Value != 0 {
-		r.logger.Info("Parsing oldest log from Value (nanoseconds)",
-			"projectId", projectID.String(),
-			"value", statsSearchResponse.Aggregations.OldestLog.Value)
-
-		// Fallback to parsing Unix timestamp in nanoseconds from Value field
+	// Parse oldest timestamp from nanoseconds only
+	if statsSearchResponse.Aggregations.OldestLog.Value != 0 {
 		stats.OldestLogTime = time.Unix(0, int64(statsSearchResponse.Aggregations.OldestLog.Value)).UTC()
-		r.logger.Info("Successfully parsed oldest log time from Value",
+		r.logger.Info("Successfully parsed oldest log time from nanoseconds",
 			"projectId", projectID.String(),
+			"nanoseconds", statsSearchResponse.Aggregations.OldestLog.Value,
 			"parsedTime", stats.OldestLogTime.Format(time.RFC3339Nano))
 	} else {
 		r.logger.Warn("No oldest log timestamp available",
 			"projectId", projectID.String())
 	}
 
-	// Parse newest timestamp if available
-	if statsSearchResponse.Aggregations.NewestLog.ValueAsString != "" {
-		r.logger.Info("Parsing newest log from ValueAsString",
-			"projectId", projectID.String(),
-			"valueAsString", statsSearchResponse.Aggregations.NewestLog.ValueAsString)
-
-		if newestTime, err := time.Parse(time.RFC3339Nano, statsSearchResponse.Aggregations.NewestLog.ValueAsString); err == nil {
-			stats.NewestLogTime = newestTime.UTC()
-			r.logger.Info("Successfully parsed newest log time from ValueAsString",
-				"projectId", projectID.String(),
-				"parsedTime", stats.NewestLogTime.Format(time.RFC3339Nano))
-		} else {
-			r.logger.Error("Failed to parse newest log time from ValueAsString",
-				"projectId", projectID.String(),
-				"valueAsString", statsSearchResponse.Aggregations.NewestLog.ValueAsString,
-				"error", err.Error())
-		}
-	} else if statsSearchResponse.Aggregations.NewestLog.Value != 0 {
-		r.logger.Info("Parsing newest log from Value (nanoseconds)",
-			"projectId", projectID.String(),
-			"value", statsSearchResponse.Aggregations.NewestLog.Value)
-
-		// Fallback to parsing Unix timestamp in nanoseconds from Value field
+	// Parse newest timestamp from nanoseconds only
+	if statsSearchResponse.Aggregations.NewestLog.Value != 0 {
 		stats.NewestLogTime = time.Unix(0, int64(statsSearchResponse.Aggregations.NewestLog.Value)).UTC()
-		r.logger.Info("Successfully parsed newest log time from Value",
+		r.logger.Info("Successfully parsed newest log time from nanoseconds",
 			"projectId", projectID.String(),
+			"nanoseconds", statsSearchResponse.Aggregations.NewestLog.Value,
 			"parsedTime", stats.NewestLogTime.Format(time.RFC3339Nano))
 	} else {
 		r.logger.Warn("No newest log timestamp available",

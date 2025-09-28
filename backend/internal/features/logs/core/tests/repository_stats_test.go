@@ -104,3 +104,53 @@ func Test_GetProjectLogStats_WithSingleLog_ReturnsCorrectStats(t *testing.T) {
 	assert.WithinDuration(t, logTime, stats.NewestLogTime, timeTolerance,
 		"Newest log time should match the single log timestamp")
 }
+
+func Test_GetProjectLogStats_WithTwelveHourTimeGap_ReturnsCorrectTimestamps(t *testing.T) {
+	t.Parallel()
+	repository := logs_core.GetLogCoreRepository()
+	projectID := uuid.New()
+	uniqueTestSession := uuid.New().String()[:8]
+
+	// Create logs with 12-hour gap
+	now := time.Now().UTC()
+	twelveHoursAgo := now.Add(-12 * time.Hour)
+
+	// First log (oldest) - 12 hours ago
+	oldLogEntries := CreateTestLogEntriesWithUniqueFields(projectID, twelveHoursAgo,
+		"Log from 12 hours ago", map[string]any{
+			"test_session":   uniqueTestSession,
+			"timestamp_test": "twelve_hours_ago",
+		})
+
+	// Second log (newest) - now
+	newLogEntries := CreateTestLogEntriesWithUniqueFields(projectID, now,
+		"Log from now", map[string]any{
+			"test_session":   uniqueTestSession,
+			"timestamp_test": "now",
+		})
+
+	allEntries := MergeLogEntries(oldLogEntries, newLogEntries)
+	StoreTestLogsAndFlush(t, repository, allEntries)
+
+	stats, err := repository.GetProjectLogStats(projectID)
+	assert.NoError(t, err)
+	assert.NotNil(t, stats)
+
+	assert.Equal(t, int64(2), stats.TotalLogs, "Should have 2 total logs")
+	assert.Greater(t, stats.TotalSizeMB, float64(0), "TotalSizeMB should be greater than 0")
+
+	// Verify timestamps with tolerance for precision
+	timeTolerance := 10 * time.Second
+	assert.WithinDuration(t, twelveHoursAgo, stats.OldestLogTime, timeTolerance,
+		"Oldest log time should match the 12-hour-ago timestamp")
+	assert.WithinDuration(t, now, stats.NewestLogTime, timeTolerance,
+		"Newest log time should match the current timestamp")
+
+	// Verify the time gap is approximately 12 hours
+	actualGap := stats.NewestLogTime.Sub(stats.OldestLogTime)
+	expectedGap := 12 * time.Hour
+	gapTolerance := 1 * time.Minute
+
+	assert.InDelta(t, expectedGap.Seconds(), actualGap.Seconds(), gapTolerance.Seconds(),
+		"Time gap between oldest and newest log should be approximately 12 hours")
+}
