@@ -69,6 +69,10 @@ services:
     volumes:
       - ./logbull-data:/logbull-data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4005/api/v1/system/health"]
+      interval: 30s
+      timeout: 5s
 EOF
 log "docker-compose.yml created successfully"
 
@@ -76,7 +80,16 @@ log "docker-compose.yml created successfully"
 log "Starting LogBull..."
 cd "$INSTALL_DIR"
 docker compose up -d
-log "Log Bull started successfully"
+
+# Quick health check
+log "Waiting for container to be ready..."
+for i in {1..30}; do
+    if docker ps --filter "name=logbull" --filter "health=healthy" -q | grep -q .; then
+        log "✅ Log Bull is healthy and ready!"
+        break
+    fi
+    sleep 5
+done
 
 log "Log Bull installation completed successfully!"
 log "-------------------------------------------"
