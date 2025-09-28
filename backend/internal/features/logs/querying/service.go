@@ -96,18 +96,47 @@ func (s *LogQueryService) GetProjectStats(
 	projectID uuid.UUID,
 	user *users_models.User,
 ) (*logs_core.ProjectLogStats, error) {
+	s.logger.Info("Starting project stats request",
+		"projectId", projectID.String(),
+		"userId", user.ID.String())
+
 	canAccess, _, err := s.projectService.CanUserAccessProject(projectID, user)
 	if err != nil {
+		s.logger.Error("Failed to verify project access for stats",
+			"projectId", projectID.String(),
+			"userId", user.ID.String(),
+			"error", err.Error())
 		return nil, fmt.Errorf("failed to verify project access: %w", err)
 	}
 	if !canAccess {
+		s.logger.Warn("User lacks permission to view project stats",
+			"projectId", projectID.String(),
+			"userId", user.ID.String())
 		return nil, errors.New("insufficient permissions to view project stats")
 	}
 
+	s.logger.Info("User authorized to view project stats, calling repository",
+		"projectId", projectID.String(),
+		"userId", user.ID.String())
+
 	stats, err := s.logRepository.GetProjectLogStats(projectID)
 	if err != nil {
+		s.logger.Error("Repository failed to get project stats",
+			"projectId", projectID.String(),
+			"userId", user.ID.String(),
+			"error", err.Error())
 		return nil, fmt.Errorf("failed to get project stats: %w", err)
 	}
+
+	s.logger.Info("Successfully retrieved project stats from repository",
+		"projectId", projectID.String(),
+		"userId", user.ID.String(),
+		"totalLogs", stats.TotalLogs,
+		"totalSizeMB", stats.TotalSizeMB,
+		"oldestLogTime", stats.OldestLogTime.Format("2006-01-02T15:04:05.000Z07:00"),
+		"newestLogTime", stats.NewestLogTime.Format("2006-01-02T15:04:05.000Z07:00"),
+		"oldestLogTimeIsZero", stats.OldestLogTime.IsZero(),
+		"newestLogTimeIsZero", stats.NewestLogTime.IsZero())
 
 	return stats, nil
 }

@@ -39,7 +39,7 @@ type LogCoreRepository struct {
 	queryBuilder *QueryBuilder
 }
 
-func (repository *LogCoreRepository) StoreLogsBatch(entries map[uuid.UUID][]*LogItem) error {
+func (r *LogCoreRepository) StoreLogsBatch(entries map[uuid.UUID][]*LogItem) error {
 	if len(entries) == 0 {
 		return nil
 	}
@@ -48,7 +48,7 @@ func (repository *LogCoreRepository) StoreLogsBatch(entries map[uuid.UUID][]*Log
 
 	for projectID, logs := range entries {
 		for _, logItem := range logs {
-			indexName := repository.indexFor(logItem.Timestamp)
+			indexName := r.indexFor(logItem.Timestamp)
 
 			metadata := map[string]any{
 				"index": map[string]any{
@@ -108,7 +108,7 @@ func (repository *LogCoreRepository) StoreLogsBatch(entries map[uuid.UUID][]*Log
 		}
 	}
 
-	bulkEndpoint := repository.baseURL + "/_bulk"
+	bulkEndpoint := r.baseURL + "/_bulk"
 	bulkRequest, err := http.NewRequest("POST", bulkEndpoint, strings.NewReader(bulkRequestBuilder.String()))
 	if err != nil {
 		return fmt.Errorf("failed to create bulk request: %w", err)
@@ -116,14 +116,14 @@ func (repository *LogCoreRepository) StoreLogsBatch(entries map[uuid.UUID][]*Log
 
 	bulkRequest.Header.Set("Content-Type", "application/x-ndjson")
 
-	bulkResponse, err := repository.client.Do(bulkRequest)
+	bulkResponse, err := r.client.Do(bulkRequest)
 	if err != nil {
 		return fmt.Errorf("failed to send logs to OpenSearch: %w", err)
 	}
 
 	defer func() {
 		if closeErr := bulkResponse.Body.Close(); closeErr != nil {
-			repository.logger.Error("failed to close bulk response body", "error", closeErr)
+			r.logger.Error("failed to close bulk response body", "error", closeErr)
 		}
 	}()
 
@@ -147,12 +147,12 @@ func (repository *LogCoreRepository) StoreLogsBatch(entries map[uuid.UUID][]*Log
 	return nil
 }
 
-func (repository *LogCoreRepository) ExecuteQueryForProject(
+func (r *LogCoreRepository) ExecuteQueryForProject(
 	projectID uuid.UUID,
 	request *LogQueryRequestDTO,
 ) (*LogQueryResponseDTO, error) {
 	startTime := time.Now()
-	searchBody, err := repository.queryBuilder.BuildSearchBody(projectID, request)
+	searchBody, err := r.queryBuilder.BuildSearchBody(projectID, request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build search body: %w", err)
 	}
@@ -162,20 +162,20 @@ func (repository *LogCoreRepository) ExecuteQueryForProject(
 		return nil, fmt.Errorf("failed to marshal search body: %w", err)
 	}
 
-	searchEndpoint := repository.baseURL + "/" + repository.indexPattern + "/_search"
+	searchEndpoint := r.baseURL + "/" + r.indexPattern + "/_search"
 	searchRequest, err := http.NewRequest("POST", searchEndpoint, bytes.NewReader(searchPayload))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create search request: %w", err)
 	}
 	searchRequest.Header.Set("Content-Type", "application/json")
 
-	searchResponse, err := repository.client.Do(searchRequest)
+	searchResponse, err := r.client.Do(searchRequest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute search: %w", err)
 	}
 	defer func() {
 		if closeErr := searchResponse.Body.Close(); closeErr != nil {
-			repository.logger.Error("failed to close search response body", "error", closeErr)
+			r.logger.Error("failed to close search response body", "error", closeErr)
 		}
 	}()
 
@@ -258,7 +258,7 @@ func (repository *LogCoreRepository) ExecuteQueryForProject(
 }
 
 // DiscoverFields returns unique non-system keys present in recent documents of the project
-func (repository *LogCoreRepository) DiscoverFields(projectID uuid.UUID) ([]string, error) {
+func (r *LogCoreRepository) DiscoverFields(projectID uuid.UUID) ([]string, error) {
 	discoveryQuery := map[string]any{
 		"size":    50,
 		"sort":    []any{map[string]any{"timestamp": map[string]any{"order": "desc"}}},
@@ -274,7 +274,7 @@ func (repository *LogCoreRepository) DiscoverFields(projectID uuid.UUID) ([]stri
 		return nil, fmt.Errorf("failed to marshal discovery query: %w", err)
 	}
 
-	discoveryEndpoint := repository.baseURL + "/" + repository.indexPattern + "/_search"
+	discoveryEndpoint := r.baseURL + "/" + r.indexPattern + "/_search"
 	discoveryRequest, err := http.NewRequest("POST", discoveryEndpoint, bytes.NewReader(discoveryPayload))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create search request: %w", err)
@@ -282,13 +282,13 @@ func (repository *LogCoreRepository) DiscoverFields(projectID uuid.UUID) ([]stri
 
 	discoveryRequest.Header.Set("Content-Type", "application/json")
 
-	discoveryResponse, err := repository.client.Do(discoveryRequest)
+	discoveryResponse, err := r.client.Do(discoveryRequest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute field discovery search: %w", err)
 	}
 	defer func() {
 		if closeErr := discoveryResponse.Body.Close(); closeErr != nil {
-			repository.logger.Error("failed to close discovery response body", "error", closeErr)
+			r.logger.Error("failed to close discovery response body", "error", closeErr)
 		}
 	}()
 
@@ -331,20 +331,20 @@ func (repository *LogCoreRepository) DiscoverFields(projectID uuid.UUID) ([]stri
 }
 
 // ForceFlush => OpenSearch _refresh to make recent docs searchable
-func (repository *LogCoreRepository) ForceFlush() error {
-	refreshEndpoint := repository.baseURL + "/" + repository.indexPattern + "/_refresh"
+func (r *LogCoreRepository) ForceFlush() error {
+	refreshEndpoint := r.baseURL + "/" + r.indexPattern + "/_refresh"
 	refreshRequest, err := http.NewRequest("POST", refreshEndpoint, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create refresh request: %w", err)
 	}
 
-	refreshResponse, err := repository.client.Do(refreshRequest)
+	refreshResponse, err := r.client.Do(refreshRequest)
 	if err != nil {
 		return fmt.Errorf("failed to execute refresh: %w", err)
 	}
 	defer func() {
 		if closeErr := refreshResponse.Body.Close(); closeErr != nil {
-			repository.logger.Error("failed to close refresh response body", "error", closeErr)
+			r.logger.Error("failed to close refresh response body", "error", closeErr)
 		}
 	}()
 
@@ -365,18 +365,18 @@ func (repository *LogCoreRepository) ForceFlush() error {
 }
 
 // Delete all logs by project
-func (repository *LogCoreRepository) DeleteLogsByProject(projectID uuid.UUID) error {
+func (r *LogCoreRepository) DeleteLogsByProject(projectID uuid.UUID) error {
 	deleteQuery := map[string]any{
 		"query": map[string]any{
 			"term": map[string]any{"project_id.keyword": projectID.String()},
 		},
 	}
 
-	return repository.deleteByQuery(deleteQuery, &projectID)
+	return r.deleteByQuery(deleteQuery, &projectID)
 }
 
 // Delete logs older than time for a given project
-func (repository *LogCoreRepository) DeleteOldLogs(projectID uuid.UUID, olderThan time.Time) error {
+func (r *LogCoreRepository) DeleteOldLogs(projectID uuid.UUID, olderThan time.Time) error {
 	deleteQuery := map[string]any{
 		"query": map[string]any{
 			"bool": map[string]any{
@@ -392,10 +392,10 @@ func (repository *LogCoreRepository) DeleteOldLogs(projectID uuid.UUID, olderTha
 		},
 	}
 
-	return repository.deleteByQuery(deleteQuery, &projectID)
+	return r.deleteByQuery(deleteQuery, &projectID)
 }
 
-func (repository *LogCoreRepository) GetProjectLogStats(projectID uuid.UUID) (*ProjectLogStats, error) {
+func (r *LogCoreRepository) GetProjectLogStats(projectID uuid.UUID) (*ProjectLogStats, error) {
 	statsQuery := map[string]any{
 		"size": 0, // Don't return hits, only aggregations
 		"query": map[string]any{
@@ -444,20 +444,20 @@ func (repository *LogCoreRepository) GetProjectLogStats(projectID uuid.UUID) (*P
 		return nil, fmt.Errorf("failed to marshal stats query: %w", err)
 	}
 
-	statsEndpoint := repository.baseURL + "/" + repository.indexPattern + "/_search"
+	statsEndpoint := r.baseURL + "/" + r.indexPattern + "/_search"
 	statsRequest, err := http.NewRequest("POST", statsEndpoint, bytes.NewReader(statsPayload))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create stats request: %w", err)
 	}
 	statsRequest.Header.Set("Content-Type", "application/json")
 
-	statsResponse, err := repository.client.Do(statsRequest)
+	statsResponse, err := r.client.Do(statsRequest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute stats search: %w", err)
 	}
 	defer func() {
 		if closeErr := statsResponse.Body.Close(); closeErr != nil {
-			repository.logger.Error("failed to close stats response body", "error", closeErr)
+			r.logger.Error("failed to close stats response body", "error", closeErr)
 		}
 	}()
 
@@ -474,10 +474,24 @@ func (repository *LogCoreRepository) GetProjectLogStats(projectID uuid.UUID) (*P
 		)
 	}
 
+	r.logger.Info("OpenSearch stats response received",
+		"projectId", projectID.String(),
+		"statusCode", statsResponse.StatusCode,
+		"responseSize", len(responseBody))
+
 	var statsSearchResponse openSearchStatsResponse
 	if err := json.Unmarshal(responseBody, &statsSearchResponse); err != nil {
 		return nil, fmt.Errorf("failed to parse stats response: %w", err)
 	}
+
+	r.logger.Info("OpenSearch stats aggregations parsed",
+		"projectId", projectID.String(),
+		"totalLogs", statsSearchResponse.Aggregations.TotalLogs.Value,
+		"totalSizeBytes", statsSearchResponse.Aggregations.TotalSizeBytes.Value,
+		"oldestLogValue", statsSearchResponse.Aggregations.OldestLog.Value,
+		"oldestLogValueAsString", statsSearchResponse.Aggregations.OldestLog.ValueAsString,
+		"newestLogValue", statsSearchResponse.Aggregations.NewestLog.Value,
+		"newestLogValueAsString", statsSearchResponse.Aggregations.NewestLog.ValueAsString)
 
 	stats := &ProjectLogStats{
 		TotalLogs:   statsSearchResponse.Aggregations.TotalLogs.Value,
@@ -486,34 +500,85 @@ func (repository *LogCoreRepository) GetProjectLogStats(projectID uuid.UUID) (*P
 
 	// Parse oldest timestamp if available
 	if statsSearchResponse.Aggregations.OldestLog.ValueAsString != "" {
+		r.logger.Info("Parsing oldest log from ValueAsString",
+			"projectId", projectID.String(),
+			"valueAsString", statsSearchResponse.Aggregations.OldestLog.ValueAsString)
+
 		if oldestTime, err := time.Parse(time.RFC3339Nano, statsSearchResponse.Aggregations.OldestLog.ValueAsString); err == nil {
 			stats.OldestLogTime = oldestTime.UTC()
+			r.logger.Info("Successfully parsed oldest log time from ValueAsString",
+				"projectId", projectID.String(),
+				"parsedTime", stats.OldestLogTime.Format(time.RFC3339Nano))
+		} else {
+			r.logger.Error("Failed to parse oldest log time from ValueAsString",
+				"projectId", projectID.String(),
+				"valueAsString", statsSearchResponse.Aggregations.OldestLog.ValueAsString,
+				"error", err.Error())
 		}
 	} else if statsSearchResponse.Aggregations.OldestLog.Value != 0 {
+		r.logger.Info("Parsing oldest log from Value (nanoseconds)",
+			"projectId", projectID.String(),
+			"value", statsSearchResponse.Aggregations.OldestLog.Value)
+
 		// Fallback to parsing Unix timestamp in nanoseconds from Value field
 		stats.OldestLogTime = time.Unix(0, int64(statsSearchResponse.Aggregations.OldestLog.Value)).UTC()
+		r.logger.Info("Successfully parsed oldest log time from Value",
+			"projectId", projectID.String(),
+			"parsedTime", stats.OldestLogTime.Format(time.RFC3339Nano))
+	} else {
+		r.logger.Warn("No oldest log timestamp available",
+			"projectId", projectID.String())
 	}
 
 	// Parse newest timestamp if available
 	if statsSearchResponse.Aggregations.NewestLog.ValueAsString != "" {
+		r.logger.Info("Parsing newest log from ValueAsString",
+			"projectId", projectID.String(),
+			"valueAsString", statsSearchResponse.Aggregations.NewestLog.ValueAsString)
+
 		if newestTime, err := time.Parse(time.RFC3339Nano, statsSearchResponse.Aggregations.NewestLog.ValueAsString); err == nil {
 			stats.NewestLogTime = newestTime.UTC()
+			r.logger.Info("Successfully parsed newest log time from ValueAsString",
+				"projectId", projectID.String(),
+				"parsedTime", stats.NewestLogTime.Format(time.RFC3339Nano))
+		} else {
+			r.logger.Error("Failed to parse newest log time from ValueAsString",
+				"projectId", projectID.String(),
+				"valueAsString", statsSearchResponse.Aggregations.NewestLog.ValueAsString,
+				"error", err.Error())
 		}
 	} else if statsSearchResponse.Aggregations.NewestLog.Value != 0 {
+		r.logger.Info("Parsing newest log from Value (nanoseconds)",
+			"projectId", projectID.String(),
+			"value", statsSearchResponse.Aggregations.NewestLog.Value)
+
 		// Fallback to parsing Unix timestamp in nanoseconds from Value field
 		stats.NewestLogTime = time.Unix(0, int64(statsSearchResponse.Aggregations.NewestLog.Value)).UTC()
+		r.logger.Info("Successfully parsed newest log time from Value",
+			"projectId", projectID.String(),
+			"parsedTime", stats.NewestLogTime.Format(time.RFC3339Nano))
+	} else {
+		r.logger.Warn("No newest log timestamp available",
+			"projectId", projectID.String())
 	}
+
+	r.logger.Info("Final project stats computed",
+		"projectId", projectID.String(),
+		"totalLogs", stats.TotalLogs,
+		"totalSizeMB", stats.TotalSizeMB,
+		"oldestLogTime", stats.OldestLogTime.Format(time.RFC3339Nano),
+		"newestLogTime", stats.NewestLogTime.Format(time.RFC3339Nano))
 
 	return stats, nil
 }
 
-func (repository *LogCoreRepository) deleteByQuery(queryBody map[string]any, routing *uuid.UUID) error {
+func (r *LogCoreRepository) deleteByQuery(queryBody map[string]any, routing *uuid.UUID) error {
 	queryPayload, err := json.Marshal(queryBody)
 	if err != nil {
 		return fmt.Errorf("failed to marshal delete query: %w", err)
 	}
 
-	deleteEndpoint := repository.baseURL + "/" + repository.indexPattern + "/_delete_by_query?conflicts=proceed&wait_for_completion=false"
+	deleteEndpoint := r.baseURL + "/" + r.indexPattern + "/_delete_by_query?conflicts=proceed&wait_for_completion=false"
 	if routing != nil {
 		deleteEndpoint += "&routing=" + routing.String()
 	}
@@ -524,13 +589,13 @@ func (repository *LogCoreRepository) deleteByQuery(queryBody map[string]any, rou
 	}
 	deleteRequest.Header.Set("Content-Type", "application/json")
 
-	deleteResponse, err := repository.client.Do(deleteRequest)
+	deleteResponse, err := r.client.Do(deleteRequest)
 	if err != nil {
 		return fmt.Errorf("failed to execute delete_by_query: %w", err)
 	}
 	defer func() {
 		if closeErr := deleteResponse.Body.Close(); closeErr != nil {
-			repository.logger.Error("failed to close delete response body", "error", closeErr)
+			r.logger.Error("failed to close delete response body", "error", closeErr)
 		}
 	}()
 
@@ -554,20 +619,20 @@ func (repository *LogCoreRepository) deleteByQuery(queryBody map[string]any, rou
 	return nil
 }
 
-func (repository *LogCoreRepository) TestOpenSearchConnection() error {
-	healthEndpoint := repository.baseURL + "/_cluster/health"
+func (r *LogCoreRepository) TestOpenSearchConnection() error {
+	healthEndpoint := r.baseURL + "/_cluster/health"
 	healthRequest, err := http.NewRequest("GET", healthEndpoint, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create health check request: %w", err)
 	}
 
-	healthResponse, err := repository.client.Do(healthRequest)
+	healthResponse, err := r.client.Do(healthRequest)
 	if err != nil {
 		return fmt.Errorf("failed to connect to OpenSearch: %w", err)
 	}
 	defer func() {
 		if closeErr := healthResponse.Body.Close(); closeErr != nil {
-			repository.logger.Error("failed to close health check response body", "error", closeErr)
+			r.logger.Error("failed to close health check response body", "error", closeErr)
 		}
 	}()
 
@@ -590,9 +655,9 @@ func (repository *LogCoreRepository) TestOpenSearchConnection() error {
 	return nil
 }
 
-func (repository *LogCoreRepository) indexFor(timestamp time.Time) string {
+func (r *LogCoreRepository) indexFor(timestamp time.Time) string {
 	utcTime := timestamp.UTC()
-	return fmt.Sprintf("%s%04d.%02d.%02d", repository.indexPrefix, utcTime.Year(), int(utcTime.Month()), utcTime.Day())
+	return fmt.Sprintf("%s%04d.%02d.%02d", r.indexPrefix, utcTime.Year(), int(utcTime.Month()), utcTime.Day())
 }
 
 func asString(value any) string {
