@@ -71,8 +71,9 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4005/api/v1/system/health"]
-      interval: 30s
+      interval: 5s
       timeout: 5s
+      retries: 30
 EOF
 log "docker-compose.yml created successfully"
 

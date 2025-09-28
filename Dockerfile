@@ -365,6 +365,10 @@ RUN chmod +x /app/start.sh
 
 EXPOSE 4005
 
+# Health check
+HEALTHCHECK --interval=5s --timeout=5s --start-period=60s --retries=30 \
+    CMD curl -f http://localhost:4005/api/v1/system/health || exit 1
+
 # Volume for PostgreSQL and OpenSearch data
 VOLUME ["/logbull-data"]
 

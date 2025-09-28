@@ -17,3 +17,9 @@ services:
       - ./logbull-data:/logbull-data
     container_name: logbull-local
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4005/api/v1/system/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 60s

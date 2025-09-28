@@ -117,7 +117,8 @@ docker run -d \
   -v ./logbull-data:/app/data \
   --restart unless-stopped \
   --health-cmd="curl -f http://localhost:4005/api/v1/system/health || exit 1" \
-  --health-interval=30s \
+  --health-interval=5s \
+  --health-retries=30 \
   logbull/logbull:latest
 ```
 
@@ -145,8 +146,9 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4005/api/v1/system/health"]
-      interval: 30s
+      interval: 5s
       timeout: 5s
+      retries: 30
 ```
 
 Then run:
