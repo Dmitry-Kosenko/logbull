@@ -474,22 +474,10 @@ func (r *LogCoreRepository) GetProjectLogStats(projectID uuid.UUID) (*ProjectLog
 		)
 	}
 
-	r.logger.Info("OpenSearch stats response received",
-		"projectId", projectID.String(),
-		"statusCode", statsResponse.StatusCode,
-		"responseSize", len(responseBody))
-
 	var statsSearchResponse openSearchStatsResponse
 	if err := json.Unmarshal(responseBody, &statsSearchResponse); err != nil {
 		return nil, fmt.Errorf("failed to parse stats response: %w", err)
 	}
-
-	r.logger.Info("OpenSearch stats aggregations parsed",
-		"projectId", projectID.String(),
-		"totalLogs", statsSearchResponse.Aggregations.TotalLogs.Value,
-		"totalSizeBytes", statsSearchResponse.Aggregations.TotalSizeBytes.Value,
-		"oldestLogNanos", statsSearchResponse.Aggregations.OldestLog.Value,
-		"newestLogNanos", statsSearchResponse.Aggregations.NewestLog.Value)
 
 	stats := &ProjectLogStats{
 		TotalLogs:   statsSearchResponse.Aggregations.TotalLogs.Value,
@@ -499,10 +487,6 @@ func (r *LogCoreRepository) GetProjectLogStats(projectID uuid.UUID) (*ProjectLog
 	// Parse oldest timestamp from nanoseconds only
 	if statsSearchResponse.Aggregations.OldestLog.Value != 0 {
 		stats.OldestLogTime = time.Unix(0, int64(statsSearchResponse.Aggregations.OldestLog.Value)).UTC()
-		r.logger.Info("Successfully parsed oldest log time from nanoseconds",
-			"projectId", projectID.String(),
-			"nanoseconds", statsSearchResponse.Aggregations.OldestLog.Value,
-			"parsedTime", stats.OldestLogTime.Format(time.RFC3339Nano))
 	} else {
 		r.logger.Warn("No oldest log timestamp available",
 			"projectId", projectID.String())
@@ -511,21 +495,10 @@ func (r *LogCoreRepository) GetProjectLogStats(projectID uuid.UUID) (*ProjectLog
 	// Parse newest timestamp from nanoseconds only
 	if statsSearchResponse.Aggregations.NewestLog.Value != 0 {
 		stats.NewestLogTime = time.Unix(0, int64(statsSearchResponse.Aggregations.NewestLog.Value)).UTC()
-		r.logger.Info("Successfully parsed newest log time from nanoseconds",
-			"projectId", projectID.String(),
-			"nanoseconds", statsSearchResponse.Aggregations.NewestLog.Value,
-			"parsedTime", stats.NewestLogTime.Format(time.RFC3339Nano))
 	} else {
 		r.logger.Warn("No newest log timestamp available",
 			"projectId", projectID.String())
 	}
-
-	r.logger.Info("Final project stats computed",
-		"projectId", projectID.String(),
-		"totalLogs", stats.TotalLogs,
-		"totalSizeMB", stats.TotalSizeMB,
-		"oldestLogTime", stats.OldestLogTime.Format(time.RFC3339Nano),
-		"newestLogTime", stats.NewestLogTime.Format(time.RFC3339Nano))
 
 	return stats, nil
 }
