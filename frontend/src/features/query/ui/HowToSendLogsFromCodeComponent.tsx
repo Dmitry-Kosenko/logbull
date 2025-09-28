@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { CopyOutlined, LoadingOutlined } from '@ant-design/icons';
-import { Button, Modal, Spin, Tabs, message } from 'antd';
+import { App, Button, Modal, Spin, Tabs } from 'antd';
 import React, { useEffect, useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -17,6 +17,9 @@ export const HowToSendLogsFromCodeComponent = ({
   projectId,
   onClose,
 }: Props): React.JSX.Element => {
+  // Hooks
+  const { message } = App.useApp();
+
   // States
   const [project, setProject] = useState<Project | null>(null);
   const [copyingStates, setCopyingStates] = useState<Record<string, boolean>>({});
@@ -33,9 +36,9 @@ export const HowToSendLogsFromCodeComponent = ({
     try {
       const success = await copyToClipboard(text);
       if (success) {
-        message.success(`${type} code copied to clipboard!`);
+        message.success(`${type} copied to clipboard!`);
       } else {
-        message.error('Failed to copy code');
+        message.error(`Failed to copy ${type}`);
       }
     } finally {
       // Keep the loading state for a brief moment to show feedback
@@ -182,6 +185,42 @@ ${apiKeyLine}  -H "Content-Type: application/json" \\
                 </strong>
               </div>
             )}
+          </div>
+
+          <div className="mb-4 flex">
+            <div className="mr-5 w-80">
+              <div className="mb-1">
+                <span className="text-xs font-medium text-gray-600">LogBull URL:</span>
+              </div>
+              <div className="flex items-center justify-between rounded border border-gray-200 bg-gray-100 px-3 py-1.5">
+                <span className="truncate font-mono text-xs text-gray-800">{baseUrl}</span>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<CopyOutlined />}
+                  loading={copyingStates['logbull-url']}
+                  onClick={() => handleCopyToClipboard(baseUrl, 'LogBull URL')}
+                  className="ml-2 h-5 min-w-5 p-0.5 text-gray-600"
+                />
+              </div>
+            </div>
+
+            <div className="w-80">
+              <div className="mb-1">
+                <span className="text-xs font-medium text-gray-600">Project ID:</span>
+              </div>
+              <div className="flex items-center justify-between rounded border border-gray-200 bg-gray-100 px-3 py-1.5">
+                <span className="truncate font-mono text-xs text-gray-800">{projectId}</span>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<CopyOutlined />}
+                  loading={copyingStates['project-id']}
+                  onClick={() => handleCopyToClipboard(projectId, 'Project ID')}
+                  className="ml-2 h-5 min-w-5 p-0.5 text-gray-600"
+                />
+              </div>
+            </div>
           </div>
 
           <Tabs defaultActiveKey="curl" items={tabItems} />
