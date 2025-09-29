@@ -399,3 +399,100 @@ func Test_ExecuteQueryForProject_FieldsSortedAscending_IncludingClientIp(t *test
 
 	t.Logf("Fields present (sorted): %v", fieldNames)
 }
+
+func Test_StoreLogsBatch_WithMixedFieldTypes_ConvertsAllToStrings(t *testing.T) {
+	t.Parallel()
+	repository := logs_core.GetLogCoreRepository()
+	projectID := uuid.New()
+	uniqueTestSession := uuid.New().String()[:8]
+	currentTime := time.Now().UTC()
+
+	// Create unique field name to avoid conflicts with existing mappings
+	testFieldName := "mixed_field_" + uniqueTestSession
+
+	// First, store a log with an integer value
+	integerFieldEntries := CreateTestLogEntriesWithUniqueFields(projectID, currentTime,
+		"Log with integer field", map[string]any{
+			testFieldName:  500, // Integer type - will be converted to string "500"
+			"test_session": uniqueTestSession,
+		})
+
+	err := repository.StoreLogsBatch(integerFieldEntries)
+	assert.NoError(t, err, "Should store integer field converted to string")
+
+	// Force flush
+	flushErr := repository.ForceFlush()
+	assert.NoError(t, flushErr, "Force flush should succeed")
+
+	// Now store a log with a string value in the same field
+	stringFieldEntries := CreateTestLogEntriesWithUniqueFields(projectID, currentTime.Add(1*time.Second),
+		"Log with string field", map[string]any{
+			testFieldName:  "ERR001", // String type - also stored as string
+			"test_session": uniqueTestSession,
+		})
+
+	// This should succeed because both values are stored as strings
+	err = repository.StoreLogsBatch(stringFieldEntries)
+	assert.NoError(t, err, "Should store string field without conflict since both are strings")
+
+	// Force flush again
+	flushErr2 := repository.ForceFlush()
+	assert.NoError(t, flushErr2, "Second force flush should succeed")
+
+	// Now store a boolean value in the same field
+	booleanFieldEntries := CreateTestLogEntriesWithUniqueFields(projectID, currentTime.Add(2*time.Second),
+		"Log with boolean field", map[string]any{
+			testFieldName:  true, // Boolean type - will be converted to string "true"
+			"test_session": uniqueTestSession,
+		})
+
+	err = repository.StoreLogsBatch(booleanFieldEntries)
+	assert.NoError(t, err, "Should store boolean field converted to string")
+
+	// Force flush
+	flushErr3 := repository.ForceFlush()
+	assert.NoError(t, flushErr3, "Third force flush should succeed")
+
+	// Query all logs to verify they're all stored correctly
+	query := &logs_core.LogQueryRequestDTO{
+		Query: &logs_core.QueryNode{
+			Type: logs_core.QueryNodeTypeCondition,
+			Condition: &logs_core.ConditionNode{
+				Field:    "test_session",
+				Operator: logs_core.ConditionOperatorEquals,
+				Value:    uniqueTestSession,
+			},
+		},
+		Limit: 10,
+	}
+
+	result, queryErr := repository.ExecuteQueryForProject(projectID, query)
+	assert.NoError(t, queryErr, "Query should succeed")
+	assert.Equal(t, int64(3), result.Total, "Should find all 3 logs")
+
+	// Verify all field values are stored as strings
+	foundIntegerAsString := false
+	foundStringValue := false
+	foundBooleanAsString := false
+	for _, log := range result.Logs {
+		if fieldValue, exists := log.Fields[testFieldName]; exists {
+			// All values should be strings
+			stringValue, isString := fieldValue.(string)
+			assert.True(t, isString, "Field value should be stored as string, got %T", fieldValue)
+
+			if stringValue == "500" {
+				foundIntegerAsString = true
+			}
+			if stringValue == "ERR001" {
+				foundStringValue = true
+			}
+			if stringValue == "true" {
+				foundBooleanAsString = true
+			}
+		}
+	}
+
+	assert.True(t, foundIntegerAsString, "Should find integer value stored as string '500'")
+	assert.True(t, foundStringValue, "Should find string value 'ERR001'")
+	assert.True(t, foundBooleanAsString, "Should find boolean value stored as string 'true'")
+}

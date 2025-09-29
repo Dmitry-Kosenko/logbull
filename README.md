@@ -114,7 +114,7 @@ The easiest way to run Log Bull:
 docker run -d \
   --name logbull \
   -p 4005:4005 \
-  -v ./logbull-data:/app/data \
+  -v ./logbull-data:/logbull-data \
   --restart unless-stopped \
   --health-cmd="curl -f http://localhost:4005/api/v1/system/health || exit 1" \
   --health-interval=5s \
@@ -142,7 +142,7 @@ services:
     ports:
       - "4005:4005"
     volumes:
-      - ./logbull-data:/app/data
+      - ./logbull-data:/logbull-data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4005/api/v1/system/health"]

@@ -78,7 +78,7 @@ func (s *LogReceivingService) SubmitLogs(
 }
 
 func (s *LogReceivingService) processLogItems(
-	logRequests []LogItemRequestDTO,
+	logItems []LogItemRequestDTO,
 	project *projects_models.Project,
 	projectID uuid.UUID,
 	clientIP string,
@@ -87,8 +87,8 @@ func (s *LogReceivingService) processLogItems(
 	var errors []LogSubmissionError
 	var totalBatchSize int
 
-	for i, logRequest := range logRequests {
-		logSize, err := s.calculateLogSize(&logRequest)
+	for i, logItem := range logItems {
+		logSize, err := s.calculateLogSize(&logItem)
 
 		if err != nil {
 			message := fmt.Sprintf("failed to calculate log size: %v", err)
@@ -106,11 +106,9 @@ func (s *LogReceivingService) processLogItems(
 
 		totalBatchSize += logSize
 
-		if logRequest.Level == "warning" {
-			logRequest.Level = logs_core.LogLevelWarn
-		}
+		logItem.Level = s.normalizeLogLevel(logItem.Level)
 
-		if err := s.validateLogItemWithSize(&logRequest, project, logSize); err != nil {
+		if err := s.validateLogItemWithSize(&logItem, project, logSize); err != nil {
 			message := err.Error()
 			if validationErr, ok := err.(*logs_core.ValidationError); ok {
 				message = validationErr.Code
@@ -127,10 +125,10 @@ func (s *LogReceivingService) processLogItems(
 		logItem := &logs_core.LogItem{
 			ID:        uuid.New(),
 			ProjectID: projectID,
-			Timestamp: time_parser.ParseTimestamp(logRequest.Timestamp),
-			Level:     logRequest.Level,
-			Message:   s.prettyFormatIfMessageJSON(logRequest.Message),
-			Fields:    logRequest.Fields,
+			Timestamp: time_parser.ParseTimestamp(logItem.Timestamp),
+			Level:     logItem.Level,
+			Message:   s.prettyFormatIfMessageJSON(logItem.Message),
+			Fields:    logItem.Fields,
 			ClientIP:  clientIP,
 		}
 
@@ -428,4 +426,34 @@ func (s *LogReceivingService) validateTimestamp(timestamp any) error {
 	}
 
 	return nil
+}
+
+// normalizeLogLevel normalizes log levels from different programming languages and frameworks
+// to our standard log levels
+func (s *LogReceivingService) normalizeLogLevel(level logs_core.LogLevel) logs_core.LogLevel {
+	normalizedLevel := strings.ToUpper(strings.TrimSpace(string(level)))
+
+	switch normalizedLevel {
+	case "DEBUG", "TRACE", "VERBOSE", "SILLY":
+		return logs_core.LogLevelDebug
+
+	case "INFO", "INFORMATION", "NOTICE":
+		return logs_core.LogLevelInfo
+
+	case "WARN", "WARNING":
+		return logs_core.LogLevelWarn
+
+	case "ERROR", "ERR", "PANIC", "CRITICAL", "CRIT", "ALERT", "EMERG", "EMERGENCY":
+		return logs_core.LogLevelError
+
+	case "FATAL":
+		return logs_core.LogLevelFatal
+
+	default:
+		if logs_core.LogLevel(normalizedLevel).IsValid() {
+			return logs_core.LogLevel(normalizedLevel)
+		}
+
+		return level
+	}
 }

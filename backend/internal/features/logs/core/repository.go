@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"maps"
 	"net/http"
 	"slices"
 	"strings"
@@ -75,18 +74,27 @@ func (r *LogCoreRepository) StoreLogsBatch(entries map[uuid.UUID][]*LogItem) err
 				"message":    logItem.Message,
 			}
 
-			// Copy custom fields directly into document
-			maps.Copy(document, logItem.Fields)
+			// Copy custom fields into document, converting non-system fields to strings to avoid mapping conflicts
+			for fieldName, fieldValue := range logItem.Fields {
+				if systemFields[fieldName] {
+					document[fieldName] = fieldValue
+				} else {
+					// Convert ALL custom fields to strings to avoid OpenSearch mapping conflicts
+					document[fieldName] = fmt.Sprintf("%v", fieldValue)
+				}
+			}
 
 			// Build attrs_tokens for custom field queries
 			var attrsTokens []string
 			var attrsTextParts []string
 			for fieldName, fieldValue := range logItem.Fields {
 				if !systemFields[fieldName] {
+					// Use string representation for attrs regardless of how we store the field
+					stringValue := fmt.Sprintf("%v", fieldValue)
 					// Add token for exact matching: "field=value"
-					attrsTokens = append(attrsTokens, fmt.Sprintf("%s=%v", fieldName, fieldValue))
+					attrsTokens = append(attrsTokens, fmt.Sprintf("%s=%s", fieldName, stringValue))
 					// Add text for contains/wildcard searches: "field:value"
-					attrsTextParts = append(attrsTextParts, fmt.Sprintf("%s:%v", fieldName, fieldValue))
+					attrsTextParts = append(attrsTextParts, fmt.Sprintf("%s:%s", fieldName, stringValue))
 				}
 			}
 

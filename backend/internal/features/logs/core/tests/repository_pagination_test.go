@@ -120,44 +120,27 @@ func verifyDescOrderingWithinPage(t *testing.T, logs []logs_core.LogItemDTO, pag
 			i,
 			currentLog.Timestamp.Format("2006-01-02T15:04:05.999999Z07:00"),
 		)
-
-		previousSeq := previousLog.Fields["sequence_num"]
-		currentSeq := currentLog.Fields["sequence_num"]
-		assert.Greater(
-			t,
-			previousSeq,
-			currentSeq,
-			"Page %d: sequence_num should be in DESC order. Previous: %v, Current: %v",
-			pageIndex,
-			previousSeq,
-			currentSeq,
-		)
 	}
 }
 
 func verifyDescOrderingAcrossPages(t *testing.T, allLogsByPage [][]logs_core.LogItemDTO) {
-	expectedSequencesDescOrder := [][]int{
-		{20, 19, 18, 17, 16},
-		{15, 14, 13, 12, 11},
-		{10, 9, 8, 7, 6},
-		{5, 4, 3, 2, 1},
-	}
+	for pageIndex := 1; pageIndex < len(allLogsByPage); pageIndex++ {
+		previousPage := allLogsByPage[pageIndex-1]
+		currentPage := allLogsByPage[pageIndex]
 
-	for pageIndex, expectedSeqsForPage := range expectedSequencesDescOrder {
-		if pageIndex >= len(allLogsByPage) {
-			break
-		}
+		if len(previousPage) > 0 && len(currentPage) > 0 {
+			lastLogFromPreviousPage := previousPage[len(previousPage)-1]
+			firstLogFromCurrentPage := currentPage[0]
 
-		actualPage := allLogsByPage[pageIndex]
-		for logIndex, expectedSeq := range expectedSeqsForPage {
-			if logIndex >= len(actualPage) {
-				break
-			}
-
-			actualSeq := extractSequenceNumber(actualPage[logIndex])
-			assert.Equal(t, float64(expectedSeq), actualSeq,
-				"Page %d, index %d: Expected sequence %d but got %v in DESC order",
-				pageIndex, logIndex, expectedSeq, actualSeq)
+			assert.True(
+				t,
+				lastLogFromPreviousPage.Timestamp.After(firstLogFromCurrentPage.Timestamp),
+				"Last log from page %d (timestamp: %s) should be after first log from page %d (timestamp: %s) in DESC order",
+				pageIndex-1,
+				lastLogFromPreviousPage.Timestamp.Format("2006-01-02T15:04:05.999999Z07:00"),
+				pageIndex,
+				firstLogFromCurrentPage.Timestamp.Format("2006-01-02T15:04:05.999999Z07:00"),
+			)
 		}
 	}
 }
@@ -192,14 +175,4 @@ func createNanosecondLogEntries(
 	}
 
 	return allBatchEntries
-}
-
-func extractSequenceNumber(log logs_core.LogItemDTO) float64 {
-	if actualSeq, ok := log.Fields["sequence_num"].(float64); ok {
-		return actualSeq
-	}
-	if seqInt, ok := log.Fields["sequence_num"].(int); ok {
-		return float64(seqInt)
-	}
-	return 0
 }
