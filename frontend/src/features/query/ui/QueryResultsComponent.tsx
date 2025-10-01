@@ -266,17 +266,14 @@ export const QueryResultsComponent = ({
               <label htmlFor="messageLength" className="text-xs font-normal text-gray-500">
                 Message length:
               </label>
+
               <input
                 id="messageLength"
                 type="number"
                 value={messageLength}
-                onChange={(e) =>
-                  setMessageLength(
-                    Math.max(10, parseInt(e.target.value) || getStoredMessageLength()),
-                  )
-                }
+                onChange={(e) => setMessageLength(Math.max(1, parseInt(e.target.value)))}
                 className="w-16 rounded border border-gray-300 px-1 py-0.5 text-xs focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 focus:outline-none"
-                min="10"
+                min="1"
                 max="1000"
               />
             </div>
