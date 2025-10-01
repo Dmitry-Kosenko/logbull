@@ -224,7 +224,7 @@ export const TimeRangePickerComponent = ({
             Select Custom Time Range
           </label>
           <RangePicker
-            showTime
+            showTime={{ format: 'HH:mm' }}
             value={customRange}
             onChange={(dates) => {
               const validDates =
