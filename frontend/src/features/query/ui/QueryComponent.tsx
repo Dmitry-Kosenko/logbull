@@ -287,6 +287,47 @@ export const QueryComponentComponent = ({ projectId, contentHeight }: Props): Re
     executeQuery(true);
   };
 
+  const handleAddFieldToQuery = (fieldName: string, fieldValue: string) => {
+    const newCondition: QueryNode = {
+      type: 'condition',
+      condition: {
+        field: fieldName,
+        operator: 'contains',
+        value: fieldValue,
+      },
+    };
+
+    if (!currentQuery) {
+      setCurrentQuery(newCondition);
+      setHasSearched(false);
+    } else if (currentQuery.type === 'condition') {
+      setCurrentQuery({
+        type: 'logical',
+        logic: {
+          operator: 'and',
+          children: [currentQuery, newCondition],
+        },
+      });
+      setHasSearched(false);
+    } else if (currentQuery.type === 'logical' && currentQuery.logic) {
+      const updatedQuery = {
+        ...currentQuery,
+        logic: {
+          ...currentQuery.logic,
+          children: [...currentQuery.logic.children, newCondition],
+        },
+      };
+      setCurrentQuery(updatedQuery);
+      setHasSearched(false);
+    }
+
+    message.success(`Field "${fieldName}" added to query`);
+
+    setTimeout(() => {
+      queryBuilderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
   const handleExecuteOrRefresh = async () => {
     if (hasSearched) {
       // If we've already searched, check if we can refresh the time range
@@ -469,6 +510,7 @@ export const QueryComponentComponent = ({ projectId, contentHeight }: Props): Re
         isExecuting={isExecuting}
         hasMoreResults={hasMoreResults}
         onLoadMore={handleLoadMore}
+        onAddFieldToQuery={handleAddFieldToQuery}
       />
 
       {isShowHowToSendLogsFromCode && (

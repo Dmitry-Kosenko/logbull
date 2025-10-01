@@ -1,5 +1,5 @@
-import { LoadingOutlined } from '@ant-design/icons';
-import { Checkbox, Spin } from 'antd';
+import { LoadingOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { Checkbox, Popconfirm, Spin } from 'antd';
 import dayjs from 'dayjs';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -57,6 +57,7 @@ interface Props {
   isExecuting: boolean;
   hasMoreResults: boolean;
   onLoadMore: () => void;
+  onAddFieldToQuery?: (fieldName: string, fieldValue: string) => void;
 }
 
 /**
@@ -77,6 +78,7 @@ export const QueryResultsComponent = ({
   isExecuting,
   hasMoreResults,
   onLoadMore,
+  onAddFieldToQuery,
 }: Props): React.JSX.Element | null => {
   // States
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -197,16 +199,39 @@ export const QueryResultsComponent = ({
         {isExpanded ? (
           fieldKeys.map((key) => {
             const { formatted, isJson } = formatFieldValue(log.fields?.[key] || '');
+
             return (
-              <div key={key} className="text-xs">
-                <span className="font-medium text-gray-700">{key}:</span>{' '}
-                <span
-                  className={`font-mono text-gray-600 ${
-                    isJson || formatted.includes(' ') ? 'whitespace-pre-wrap' : ''
-                  }`}
+              <div
+                className="flex text-xs"
+                key={key}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+              >
+                <Popconfirm
+                  title="Add this field to the query?"
+                  icon={<QuestionCircleOutlined style={{ color: '#10b981' }} />}
+                  okText="Yes"
+                  cancelText="No"
+                  okButtonProps={{ className: 'bg-emerald-600 hover:bg-emerald-700' }}
+                  onConfirm={() => {
+                    if (onAddFieldToQuery) {
+                      onAddFieldToQuery(key, log.fields?.[key] || '');
+                    }
+                  }}
                 >
-                  {formatted}
-                </span>
+                  <div className="cursor-pointer rounded px-1 hover:bg-emerald-200">
+                    <span className="font-medium text-gray-700">{key}:</span>{' '}
+                    <span
+                      className={`font-mono text-gray-600 ${
+                        isJson || formatted.includes(' ') ? 'whitespace-pre-wrap' : ''
+                      }`}
+                    >
+                      {formatted}
+                    </span>
+                  </div>
+                </Popconfirm>
               </div>
             );
           })
