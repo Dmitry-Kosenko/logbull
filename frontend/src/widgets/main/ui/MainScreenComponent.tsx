@@ -132,6 +132,15 @@ export const MainScreenComponent = () => {
         <div className="mr-3 ml-auto flex items-center gap-5">
           <a
             className="!text-black hover:opacity-80"
+            href="https://logbull.com/installation/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Docs
+          </a>
+
+          <a
+            className="!text-black hover:opacity-80"
             href="https://t.me/logbull_community"
             target="_blank"
             rel="noreferrer"
