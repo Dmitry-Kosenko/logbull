@@ -202,7 +202,7 @@ export const QueryResultsComponent = ({
 
             return (
               <div
-                className="flex text-xs"
+                className="flex text-xs break-all"
                 key={key}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -237,7 +237,7 @@ export const QueryResultsComponent = ({
           })
         ) : (
           <div className="text-xs">
-            <span className="font-mono text-gray-600">{displayText}</span>
+            <span className="font-mono break-all text-gray-600">{displayText}</span>
             {isTruncated && (
               <span className="ml-1 cursor-pointer text-emerald-600 hover:text-emerald-700">
                 (expand)
