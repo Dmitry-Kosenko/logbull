@@ -6,6 +6,7 @@
   
   <!-- Badges -->
   [![Apache 2.0 License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+  [![Docker Pulls](https://img.shields.io/docker/pulls/logbull/logbull)](https://hub.docker.com/r/logbull/logbull)
   [![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-lightgrey)](#)
   [![Self Hosted](https://img.shields.io/badge/self--hosted-yes-brightgreen)](#)
   [![Open Source](https://img.shields.io/badge/open%20source-❤️-red)](#)
