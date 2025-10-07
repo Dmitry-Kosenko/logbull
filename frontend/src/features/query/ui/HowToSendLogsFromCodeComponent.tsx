@@ -1,12 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { CopyOutlined, LoadingOutlined } from '@ant-design/icons';
-import { App, Button, Modal, Spin, Tabs } from 'antd';
+import { Button, Modal, Spin } from 'antd';
 import React, { useEffect, useState } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 import { type Project, projectApi } from '../../../entity/projects';
 import { copyToClipboard } from '../../../shared/lib';
+import { CodeUsageComponent } from './CodeUsageComponent';
 
 interface Props {
   projectId: string;
@@ -17,9 +15,6 @@ export const HowToSendLogsFromCodeComponent = ({
   projectId,
   onClose,
 }: Props): React.JSX.Element => {
-  // Hooks
-  const { message } = App.useApp();
-
   // States
   const [project, setProject] = useState<Project | null>(null);
   const [copyingStates, setCopyingStates] = useState<Record<string, boolean>>({});
@@ -30,18 +25,13 @@ export const HowToSendLogsFromCodeComponent = ({
     setProject(project);
   };
 
-  const handleCopyToClipboard = async (text: string, type: string) => {
+  const handleCopyToClipboard = async (text: string) => {
+    const type = text === window.origin ? 'logbull-url' : 'project-id';
     setCopyingStates((prev) => ({ ...prev, [type]: true }));
 
     try {
-      const success = await copyToClipboard(text);
-      if (success) {
-        message.success(`${type} copied to clipboard!`);
-      } else {
-        message.error(`Failed to copy ${type}`);
-      }
+      await copyToClipboard(text);
     } finally {
-      // Keep the loading state for a brief moment to show feedback
       setTimeout(() => {
         setCopyingStates((prev) => ({ ...prev, [type]: false }));
       }, 300);
@@ -55,71 +45,6 @@ export const HowToSendLogsFromCodeComponent = ({
 
   // Calculated values
   const baseUrl = window.origin;
-  const apiKeyLine = project?.isApiKeyRequired
-    ? `  -H "X-API-Key: YOUR_API_KEY_HERE" \\
-`
-    : '';
-  const curlExample = `curl -X POST "${baseUrl}/api/v1/logs/receiving/${projectId}" \\
-${apiKeyLine}  -H "Content-Type: application/json" \\
-  -d '{
-    "logs": [
-      {
-        "level": "INFO",
-        "message": "User logged in successfully",
-        "fields": {
-          "userId": "12345",
-          "username": "john_doe",
-          "ip": "192.168.1.100"
-        }
-      }
-    ]
-  }'`;
-
-  const tabItems = [
-    {
-      key: 'curl',
-      label: 'cURL',
-      children: (
-        <div>
-          <div style={{ marginBottom: 8 }}>
-            <strong>Basic cURL example:</strong>
-          </div>
-
-          <div style={{ position: 'relative' }}>
-            <Button
-              type="text"
-              size="small"
-              icon={<CopyOutlined />}
-              loading={copyingStates['cURL']}
-              onClick={() => handleCopyToClipboard(curlExample, 'cURL')}
-              style={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                zIndex: 10,
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                color: 'rgba(255, 255, 255, 0.8)',
-                border: 'none',
-              }}
-            />
-            {React.createElement(
-              SyntaxHighlighter as React.ComponentType<any>,
-              {
-                language: 'bash',
-                style: oneDark,
-                customStyle: {
-                  margin: 0,
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                },
-              },
-              curlExample,
-            )}
-          </div>
-        </div>
-      ),
-    },
-  ];
 
   return (
     <Modal
@@ -127,11 +52,13 @@ ${apiKeyLine}  -H "Content-Type: application/json" \\
       open={true}
       onCancel={onClose}
       footer={null}
-      width={800}
+      width={1000}
       style={{ top: 20 }}
     >
       {!project ? (
-        <Spin indicator={<LoadingOutlined spin />} />
+        <div className="flex justify-center py-8">
+          <Spin indicator={<LoadingOutlined spin />} />
+        </div>
       ) : (
         <div>
           <div style={{ marginBottom: 16 }}>
@@ -199,7 +126,7 @@ ${apiKeyLine}  -H "Content-Type: application/json" \\
                   size="small"
                   icon={<CopyOutlined />}
                   loading={copyingStates['logbull-url']}
-                  onClick={() => handleCopyToClipboard(baseUrl, 'LogBull URL')}
+                  onClick={() => handleCopyToClipboard(baseUrl)}
                   className="ml-2 h-5 min-w-5 p-0.5 text-gray-600"
                 />
               </div>
@@ -216,14 +143,19 @@ ${apiKeyLine}  -H "Content-Type: application/json" \\
                   size="small"
                   icon={<CopyOutlined />}
                   loading={copyingStates['project-id']}
-                  onClick={() => handleCopyToClipboard(projectId, 'Project ID')}
+                  onClick={() => handleCopyToClipboard(projectId)}
                   className="ml-2 h-5 min-w-5 p-0.5 text-gray-600"
                 />
               </div>
             </div>
           </div>
 
-          <Tabs defaultActiveKey="curl" items={tabItems} />
+          <CodeUsageComponent
+            logbullHost={baseUrl}
+            logbullProjectId={projectId}
+            logbullApiKey="YOUR_API_KEY_HERE"
+            isLogBullApiKeyRequired={project.isApiKeyRequired}
+          />
         </div>
       )}
     </Modal>
