@@ -119,17 +119,61 @@ export const ConditionEditorComponent = ({
     }
 
     const field = getOrCreateField(fieldName);
+    const currentOperator = condition?.operator;
+    const currentValue = condition?.value;
 
-    // For "message" field, default to "contains" operator since it's more commonly used than "equals"
-    const newOperator =
-      fieldName === 'message' && field.operations.includes('contains')
-        ? 'contains'
-        : field.operations[0];
+    // Determine the operator to use:
+    // 1. If current operator is compatible with new field, keep it
+    // 2. Otherwise, use field's default operator
+    let newOperator: QueryOperator;
+    if (currentOperator && field.operations.includes(currentOperator)) {
+      // Current operator is compatible with new field, preserve it
+      newOperator = currentOperator;
+    } else {
+      // Need to pick a new operator
+      // For "message" field, default to "contains" operator since it's more commonly used than "equals"
+      newOperator =
+        fieldName === 'message' && field.operations.includes('contains')
+          ? 'contains'
+          : field.operations[0];
+    }
+
+    // Preserve the current value if it exists and is compatible with the operator
+    let newValue: string | number | boolean | string[] | null;
+
+    // Only reset value if:
+    // 1. There's no current value, OR
+    // 2. The value type is incompatible with the operator
+    const hasValue =
+      currentValue !== null &&
+      currentValue !== undefined &&
+      currentValue !== '' &&
+      !(Array.isArray(currentValue) && currentValue.length === 0);
+
+    if (!hasValue) {
+      // No current value, use default
+      newValue = getDefaultValueForOperator(newOperator);
+    } else {
+      // Check if the value type is compatible with the operator
+      if (!operatorNeedsValue(newOperator)) {
+        // Operator doesn't need a value (exists/not_exists)
+        newValue = null;
+      } else if (operatorExpectsArray(newOperator) && !Array.isArray(currentValue)) {
+        // Operator needs an array, but current value is not an array - convert it
+        newValue = [String(currentValue)];
+      } else if (!operatorExpectsArray(newOperator) && Array.isArray(currentValue)) {
+        // Operator needs a single value, but current value is an array - use first element
+        newValue = currentValue.length > 0 ? String(currentValue[0]) : '';
+      } else {
+        // Keep the current value as is
+        newValue = currentValue;
+      }
+    }
 
     onChange({
       field: fieldName,
       operator: newOperator,
-      value: getDefaultValueForOperator(newOperator),
+      value: newValue,
     });
   };
 
