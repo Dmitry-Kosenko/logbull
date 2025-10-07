@@ -1,8 +1,8 @@
 <div align="center">
   <img src="assets/logo.svg" style="margin-bottom: 20px;" alt="Log Bull Logo" width="250"/>
 
-  <h3>Simple log collection and view system</h3>
-  <p>From developer to developer. Install from one command, zero config and much easier than ELK or Loki</p>
+  <h3>Simple log collection and view system for developers</h3>
+  <p>Simple alternative to ELK and Loki. Self-hosted, zero-config, open source</p>
   
   <!-- Badges -->
   [![Apache 2.0 License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
@@ -23,10 +23,31 @@
   <p style="margin-top: 20px; margin-bottom: 20px; font-size: 1.2em;">
     <a href="https://logbull.com" target="_blank"><strong>🌐 Log Bull website</strong></a>
   </p>
-  
-  <img src="assets/dashboard.png" alt="Log Bull Dashboard" width="800"/>
 
+  <img src="assets/dashboard.svg" alt="Log Bull Dashboard" style="background: #fff; padding: 20px;" />
 </div>
+
+To send logs you have libraries for many languages. Just a Python example:
+
+```python
+from logbull import LogBullLogger
+
+# Initialize logger
+logger = LogBullLogger(
+    host="http://LOGBULL_HOST",
+    project_id="LOGBULL_PROJECT_ID",
+    api_key="YOUR_API_KEY"  # optional, if you need it
+)
+
+# Log messages (printed to console AND sent to LogBull)
+logger.info("User logged in successfully", fields={
+    "user_id": "12345",
+    "username": "john_doe",
+    "ip": "192.168.1.100"
+})
+```
+
+See more examples on Python, Go, Java, JavaScript, PHP, etc. here - https://logbull.com/#how-to-use-in-code
 
 ---
 
@@ -34,12 +55,16 @@
 
 ### 🐳 **Easy Deployment**
 
-- **Docker-based**: Launch in Docker with one command
-- **Zero configuration**: Works out of the box
-- **Self-hosted**: All your data stays on your infrastructure
-- **Open source**: Apache 2.0 licensed
+Log Bull is an Apache 2.0 licensed, self-hosted log collection system designed for developers and small teams. Unlike ELK (Elasticsearch, Logstash, Kibana) or Loki which require complex configurations, significant resources (multiple services, heavy memory usage), and extensive setup time, Log Bull works out of the box with zero configuration and runs as a single lightweight Docker container.
+
+- **Docker-based**: Launch in Docker with one command - the entire process takes less than 2 minutes
+- **Zero configuration**: Works out of the box without any setup
+- **Self-hosted**: All your data stays on your infrastructure - no data ever leaves your servers
+- **Open source**: Apache 2.0 licensed - you or your security team can audit every line of code
 
 ### 📝 **Multi-Language Log Collection**
+
+The system supports virtually any language that can send HTTP requests. You don't need to change your existing logging code — just add Log Bull as an additional handler to your current logger.
 
 - **Go**: Native support with structured logging
 - **Python**: Compatible with standard logging libraries
@@ -52,28 +77,49 @@
 
 ### 🎯 **Project Management**
 
+Install Log Bull once and use it for all your applications. Each project gets its own isolated log space with separate project IDs and API keys. You can organize logs by microservices, environments (dev, staging, production), or any other structure that fits your workflow.
+
 - **Multiple projects**: Organize logs by different applications or services
-- **Project isolation**: Keep logs separated and organized
+- **Project isolation**: Keep logs separated with their own API keys
 - **Easy switching**: Quick project selection in the dashboard
+- **Flexible organization**: Structure projects however fits your team's needs
 
 ### 👥 **Multi-User Support**
 
+Add team members (developers, DevOps, project managers) and control their access to specific projects. The system includes built-in multi-user support with granular access management.
+
 - **Team collaboration**: Add multiple users to your Log Bull instance
-- **User management**: Control access and permissions
+- **Access management**: Control which projects each user can access
+- **User roles**: Manage permissions for different team members
 - **Secure authentication**: Built-in user authentication system
 
 ### 📊 **Audit Logging**
 
-- **Complete audit trail**: See who changed what and when
-- **User activity tracking**: Monitor all user actions
-- **Change history**: Track modifications to projects and settings
+Each user action is tracked in audit logs, showing who changed what and when. Complete transparency for your logging infrastructure.
+
+- **Complete audit trail**: See who changed settings and when
+- **User activity tracking**: Monitor all user actions in the system
+- **Change history**: Track modifications to projects and configurations
+- **Accountability**: Know exactly what happened and who did it
 
 ### 🔍 **Powerful Log Querying**
 
+Search logs by text, filter by fields, and query within specific time ranges. All without complex query languages or configurations.
+
 - **Advanced search**: Find logs quickly with powerful search capabilities
-- **Real-time viewing**: Stream logs as they arrive
-- **Filtering**: Filter logs by various criteria
+- **Real-time viewing**: Stream logs as they arrive in your applications
+- **Flexible filtering**: Filter logs by various criteria and custom fields
 - **Time-based queries**: Search logs within specific time ranges
+- **Simple interface**: No complex query language needed
+
+### 🔐 **API Keys & Security**
+
+Control the amount of logs, allowed domains, and instances. You decide who sends logs to your system with configurable limits and restrictions.
+
+- **API key management**: Separate keys for each project
+- **Domain restrictions**: Control which domains can send logs
+- **Rate limiting**: Set limits on log volume and frequency
+- **Instance control**: Restrict the number of instances that can connect
 
 ---
 
@@ -87,19 +133,22 @@ Log Bull requires the following minimum system resources to run properly:
 - **Docker**: Docker Engine 20.10+ and Docker Compose v2.0+
 - **Network**: Internet connection for initial setup and updates
 
+**Note on Storage**: Log Bull is designed for developers and small teams, not for enterprises with terabytes of logs. All logs are stored locally on your server in the mounted volume (`./logbull-data` directory). Storage usage depends on your log volume, but the system includes configurable retention policies and limits to help manage disk space effectively while keeping your most important logs accessible.
+
 ---
 
 ## 📦 Installation
 
-You have three ways to install Log Bull: automated script (recommended), simple Docker run, or Docker Compose setup.
+Log Bull can be installed in three ways: automated script (recommended), simple Docker run, or Docker Compose setup. The fastest method is the one-line automated installation script which automatically installs Docker (if needed), pulls the image, sets up the container, and configures automatic startup on system reboot. The entire process takes less than 2 minutes.
 
 ### Option 1: Automated Installation Script (Recommended, Linux only)
 
-The installation script will:
+The installation script will automatically:
 
 - ✅ Install Docker with Docker Compose (if not already installed)
-- ✅ Set up Log Bull
+- ✅ Pull the Log Bull image and set up the container
 - ✅ Configure automatic startup on system reboot
+- ✅ Get you up and running in under 2 minutes
 
 ```bash
 sudo apt-get install -y curl && \
@@ -109,7 +158,7 @@ sudo curl -sSL https://raw.githubusercontent.com/logbull/logbull/main/install-lo
 
 ### Option 2: Simple Docker Run
 
-The easiest way to run Log Bull:
+The easiest way to run Log Bull with a single command. All logs are stored locally on your server in the mounted volume.
 
 ```bash
 docker run -d \
@@ -125,9 +174,10 @@ docker run -d \
 
 This single command will:
 
-- ✅ Start Log Bull
-- ✅ Store all data in `./logbull-data` directory
+- ✅ Start Log Bull and expose it on port 4005
+- ✅ Store all data in `./logbull-data` directory on your server
 - ✅ Automatically restart on system reboot
+- ✅ Include health checks to ensure the system is running properly
 
 ### Option 3: Docker Compose Setup
 
@@ -162,11 +212,13 @@ docker compose up -d
 
 ## 🚀 Usage
 
+Getting started with Log Bull is simple and takes just a few minutes:
+
 1. **Launch and access Log Bull**: Start Log Bull and navigate to `http://localhost:4005`
-2. **Create your first project**: Click "New Project" and copy the generated project ID
-3. **Integrate with your application**: Connect Log Bull to your existing logger in your codebase (Python, Go, Node.js, etc.)
-4. **Start viewing logs**: Watch your logs stream in real-time in the Log Bull dashboard!
-5. **Manage your setup**: Add team members, adjust limits, and configure settings if needed
+2. **Create your first project**: Click "New Project" and copy the generated project ID. Each project gets its own isolated log space with separate API keys.
+3. **Integrate with your application**: Add Log Bull as a handler to your existing logger (Python, Go, Java, Node.js, etc.). Most integrations require just 3-5 lines of code - you don't need to change your existing logging code.
+4. **Start viewing logs**: Watch your logs stream in real-time in the Log Bull dashboard! Search by text, filter by fields, and query within specific time ranges.
+5. **Manage your setup**: Add team members, control access to projects, set API key limits, and configure domain restrictions as needed.
 
 ### 🔑 Resetting Admin Password
 
@@ -176,7 +228,7 @@ If you need to reset the admin password, you can use the built-in password reset
 docker exec -it logbull ./main --new-password="YourNewSecurePassword123" --email="admin"
 ```
 
-Replace `admin@example.com` with the actual email address of the user whose password you want to reset.
+Replace `admin` with the actual email address of the user whose password you want to reset.
 
 ---
 
@@ -188,4 +240,10 @@ This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENS
 
 ## 🤝 Contributing
 
-Contributions are welcome! If you want to contribute to Log Bull but don't know what and how - message the developer on Telegram [@rostislav_dugin](https://t.me/rostislav_dugin)
+Contributions are welcome! Log Bull is open source (Apache 2.0 license) and built by developers for developers.
+
+For detailed contribution guides, priorities, and rules, please visit our [Contribution Guide](https://logbull.com/contribution/contribution/).
+
+If you want to contribute to Log Bull but don't know what and how, or if you have ideas for improvements, message the developer on Telegram [@rostislav_dugin](https://t.me/rostislav_dugin) or join our [community chat](https://t.me/logbull_community).
+
+**If you find Log Bull useful, please star it on GitHub ⭐ - it really helps the project grow!**
