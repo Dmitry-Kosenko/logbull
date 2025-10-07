@@ -55,7 +55,7 @@ See more examples on Python, Go, Java, JavaScript, PHP, etc. here - https://logb
 
 ### 🐳 **Easy Deployment**
 
-Log Bull is an Apache 2.0 licensed, self-hosted log collection system designed for developers and small teams. Unlike ELK (Elasticsearch, Logstash, Kibana) or Loki which require complex configurations, significant resources (multiple services, heavy memory usage), and extensive setup time, Log Bull works out of the box with zero configuration and runs as a single lightweight Docker container.
+Log Bull is an Apache 2.0 licensed, self-hosted log collection system designed for developers and small teams. Unlike ELK (Elasticsearch, Logstash, Kibana) or Loki which require complex configurations, Log Bull works out of the box with zero configuration and runs as a single lightweight Docker container.
 
 - **Docker-based**: Launch in Docker with one command - the entire process takes less than 2 minutes
 - **Zero configuration**: Works out of the box without any setup
@@ -66,13 +66,14 @@ Log Bull is an Apache 2.0 licensed, self-hosted log collection system designed f
 
 The system supports virtually any language that can send HTTP requests. You don't need to change your existing logging code — just add Log Bull as an additional handler to your current logger.
 
-- **Go**: Native support with structured logging
 - **Python**: Compatible with standard logging libraries
+- **Go**: Native support with structured logging
 - **Java**: Support for popular Java logging frameworks (Log4j, Logback, SLF4J)
-- **Node.js**: Winston, Bunyan, and other JavaScript logging libraries
+- **JavaScript**: Winston, Bunyan, and other Node.js logging libraries
 - **C#/.NET**: Serilog, NLog, and Microsoft.Extensions.Logging
 - **PHP**: Monolog and PSR-3 compatible loggers
 - **Ruby**: Standard Logger, Lograge, and Rails logging
+- **Rust**: Support for popular Rust logging frameworks (log, env_logger, tracing)
 - **And many more**: Supports any application that can send HTTP requests
 
 ### 🎯 **Project Management**

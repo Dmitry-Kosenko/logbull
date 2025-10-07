@@ -638,7 +638,21 @@ export function ProjectSettingsComponent({ projectResponse, user, contentHeight 
 
                 {/* Rate Limiting & Quotas */}
                 <div className="max-w-2xl border-b border-gray-200 pb-6">
-                  <h2 className="mb-4 text-xl font-bold text-gray-900">Rate limiting & quotas</h2>
+                  <h2 className="text-xl leading-1.5 font-bold text-gray-900">
+                    Rate limiting & quotas
+                  </h2>
+
+                  <div className="mt-3 mb-4 text-sm text-gray-500">
+                    Read more about settings you can{' '}
+                    <a
+                      href="https://logbull.com/settings"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="!text-emerald-600"
+                    >
+                      here
+                    </a>
+                  </div>
 
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>

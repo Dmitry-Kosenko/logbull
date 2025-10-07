@@ -98,7 +98,7 @@ export function SettingsComponent({ contentHeight }: Props) {
         >
           <h1 className="text-2xl font-bold">LogBull Settings</h1>
 
-          <div className="my-6 min-h-[300px]">
+          <div className="mt-6">
             {isLoading ? (
               <div>
                 <Spin indicator={<LoadingOutlined spin />} />
@@ -132,30 +132,32 @@ export function SettingsComponent({ contentHeight }: Props) {
                   </div>
 
                   {/* Member Invitations Setting */}
-                  <div className="flex items-start justify-between border-b border-gray-200 pb-4">
-                    <div className="flex-1 pr-20">
-                      <div className="font-medium text-gray-900">Allow member invitations</div>
+                  {!formSettings.isAllowExternalRegistrations && (
+                    <div className="flex items-start justify-between border-b border-gray-200 pb-4">
+                      <div className="flex-1 pr-20">
+                        <div className="font-medium text-gray-900">Allow member invitations</div>
 
-                      <div className="mt-1 text-gray-500">
-                        When enabled, existing members can invite new users to join LogBull. If not
-                        - only admins can invite users.
+                        <div className="mt-1 text-gray-500">
+                          When enabled, existing members can invite new users to join LogBull. If
+                          not - only admins can invite users.
+                        </div>
+                      </div>
+
+                      <div className="ml-4">
+                        <Switch
+                          checked={formSettings.isAllowMemberInvitations}
+                          onChange={(checked) =>
+                            handleSettingChange('isAllowMemberInvitations', checked)
+                          }
+                          style={{
+                            backgroundColor: formSettings.isAllowMemberInvitations
+                              ? '#059669'
+                              : undefined,
+                          }}
+                        />
                       </div>
                     </div>
-
-                    <div className="ml-4">
-                      <Switch
-                        checked={formSettings.isAllowMemberInvitations}
-                        onChange={(checked) =>
-                          handleSettingChange('isAllowMemberInvitations', checked)
-                        }
-                        style={{
-                          backgroundColor: formSettings.isAllowMemberInvitations
-                            ? '#059669'
-                            : undefined,
-                        }}
-                      />
-                    </div>
-                  </div>
+                  )}
 
                   {/* Member Project Creation Setting */}
                   <div className="flex items-start justify-between border-b border-gray-200 pb-4">
@@ -203,6 +205,18 @@ export function SettingsComponent({ contentHeight }: Props) {
                 )}
               </div>
             )}
+          </div>
+
+          <div className="mt-3 text-sm text-gray-500">
+            Read more about settings you can{' '}
+            <a
+              href="https://logbull.com/settings"
+              target="_blank"
+              rel="noreferrer"
+              className="!text-emerald-600"
+            >
+              here
+            </a>
           </div>
 
           {/* Health-check Information */}

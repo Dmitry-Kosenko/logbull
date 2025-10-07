@@ -24,18 +24,6 @@ type UserService struct {
 	auditLogWriter users_interfaces.AuditLogWriter
 }
 
-func NewUserService(
-	userRepository *users_repositories.UserRepository,
-	secretKeyRepository *users_repositories.SecretKeyRepository,
-	settingsService *SettingsService,
-) *UserService {
-	return &UserService{
-		userRepository:      userRepository,
-		secretKeyRepository: secretKeyRepository,
-		settingsService:     settingsService,
-	}
-}
-
 func (s *UserService) SetAuditLogWriter(writer users_interfaces.AuditLogWriter) {
 	s.auditLogWriter = writer
 }
