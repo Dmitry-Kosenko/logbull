@@ -417,10 +417,19 @@ func (s *LogReceivingService) validateTimestamp(timestamp any) error {
 	parsedTimestamp := time_parser.ParseTimestamp(timestamp)
 	currentTime := time.Now().UTC()
 
-	if parsedTimestamp.After(currentTime) {
+	// Usually, if logs are in the future - this is a mistake and needs to be fixed.
+	// However, sometimes we receive logs a couple of milliseconds or seconds in the future, and this is expected behavior.
+	//
+	// To ensure log order, if multiple logs have the same timestamp down to the nanosecond,
+	// logging libraries may add an additional millisecond or nanosecond to maintain sequence.
+	// We allow up to 5 minutes in the future as a safety buffer.
+	//
+	// However, if logs are more than 5 minutes in the future - this is definitely a mistake.
+	maxFutureOffset := 5 * time.Minute
+	if parsedTimestamp.After(currentTime.Add(maxFutureOffset)) {
 		return &logs_core.ValidationError{
 			Code:    logs_core.ErrorFutureTimestamp,
-			Message: "timestamp cannot be in the future",
+			Message: "timestamp cannot be more than 5 minutes in the future",
 			Field:   "timestamp",
 		}
 	}
