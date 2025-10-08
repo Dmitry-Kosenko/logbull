@@ -26,6 +26,7 @@ import type { UserProfile } from '../../../entity/users';
 import { ProjectRole } from '../../../entity/users/model/ProjectRole';
 import { UserRole } from '../../../entity/users/model/UserRole';
 import { StringUtils } from '../../../shared/lib';
+import { getUserShortTimeFormat } from '../../../shared/time';
 
 interface Props {
   contentHeight: number;
@@ -314,12 +315,11 @@ export function ProjectMembershipComponent({ contentHeight, projectResponse, use
       width: 200,
       render: (createdAt: Date) => {
         const date = dayjs(createdAt);
+        const timeFormat = getUserShortTimeFormat();
         return (
           <div className="text-sm text-gray-600">
-            <div>{date.format('MMM D, YYYY')}</div>
-            <div className="text-xs text-gray-400">
-              {date.format('HH:mm')} ({date.fromNow()})
-            </div>
+            <div>{date.format(timeFormat.format)}</div>
+            <div className="text-xs text-gray-400">{date.fromNow()}</div>
           </div>
         );
       },

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { AuditLog } from '../../../entity/audit-logs/model/AuditLog';
 import { projectApi } from '../../../entity/projects/api/projectApi';
+import { getUserShortTimeFormat } from '../../../shared/time';
 
 interface Props {
   projectId: string;
@@ -128,9 +129,11 @@ export function ProjectAuditLogsComponent({
       key: 'createdAt',
       width: 250,
       render: (createdAt: string) => {
+        const date = dayjs(createdAt);
+        const timeFormat = getUserShortTimeFormat();
         return (
           <span className="text-xs text-gray-700">
-            {`${dayjs(createdAt).format('MMM D, YYYY')} at ${dayjs(createdAt).format('HH:mm')} (${dayjs(createdAt).fromNow()})`}
+            {`${date.format(timeFormat.format)} (${date.fromNow()})`}
           </span>
         );
       },

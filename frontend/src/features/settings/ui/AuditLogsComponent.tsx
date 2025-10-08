@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { auditLogApi } from '../../../entity/audit-logs/api/auditLogApi';
 import type { AuditLog } from '../../../entity/audit-logs/model/AuditLog';
 import type { GetAuditLogsRequest } from '../../../entity/audit-logs/model/GetAuditLogsRequest';
+import { getUserShortTimeFormat } from '../../../shared/time';
 
 interface Props {
   scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
@@ -137,9 +138,11 @@ export function AuditLogsComponent({ scrollContainerRef: externalScrollRef }: Pr
       key: 'createdAt',
       width: 250,
       render: (createdAt: string) => {
+        const date = dayjs(createdAt);
+        const timeFormat = getUserShortTimeFormat();
         return (
           <span className="text-xs text-gray-700">
-            {`${dayjs(createdAt).format('MMM D, YYYY')} at ${dayjs(createdAt).format('HH:mm')} (${dayjs(createdAt).fromNow()})`}
+            {`${date.format(timeFormat.format)} (${date.fromNow()})`}
           </span>
         );
       },

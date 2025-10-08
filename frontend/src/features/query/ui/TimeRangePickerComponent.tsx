@@ -1,7 +1,9 @@
 import { ClockCircleOutlined } from '@ant-design/icons';
 import { DatePicker, Select } from 'antd';
 import dayjs from 'dayjs';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+
+import { getUserShortTimeFormat } from '../../../shared/time';
 
 const { RangePicker } = DatePicker;
 
@@ -122,6 +124,9 @@ export const TimeRangePickerComponent = ({
   const [selectedPreset, setSelectedPreset] = useState<string>('24h');
   const [customRange, setCustomRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
 
+  // Get user's time format preference
+  const timeFormat = useMemo(() => getUserShortTimeFormat(), []);
+
   // Functions
   const getCurrentRange = (): TimeRange | null => {
     if (selectedPreset === 'custom') {
@@ -224,7 +229,10 @@ export const TimeRangePickerComponent = ({
             Select Custom Time Range
           </label>
           <RangePicker
-            showTime={{ format: 'HH:mm' }}
+            showTime={{
+              format: timeFormat.use12Hours ? 'h:mm A' : 'HH:mm',
+              use12Hours: timeFormat.use12Hours,
+            }}
             value={customRange}
             onChange={(dates) => {
               const validDates =

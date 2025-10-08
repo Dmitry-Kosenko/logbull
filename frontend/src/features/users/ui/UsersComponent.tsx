@@ -9,6 +9,7 @@ import type { ChangeUserRoleRequest } from '../../../entity/users/model/ChangeUs
 import type { ListUsersRequest } from '../../../entity/users/model/ListUsersRequest';
 import type { UserProfile } from '../../../entity/users/model/UserProfile';
 import { UserRole } from '../../../entity/users/model/UserRole';
+import { getUserShortTimeFormat } from '../../../shared/time';
 import { UserAuditLogsSidebarComponent } from './UserAuditLogsSidebarComponent';
 
 interface Props {
@@ -247,11 +248,10 @@ export function UsersComponent({ contentHeight }: Props) {
       width: 300,
       render: (createdAt: string) => {
         const date = dayjs(createdAt);
+        const timeFormat = getUserShortTimeFormat();
         return (
           <div className="text-sm text-gray-600">
-            <div>
-              {date.format('MMM D, YYYY')} at {date.format('HH:mm')}
-            </div>
+            <div>{date.format(timeFormat.format)}</div>
             <div className="text-xs text-gray-400">{date.fromNow()}</div>
           </div>
         );

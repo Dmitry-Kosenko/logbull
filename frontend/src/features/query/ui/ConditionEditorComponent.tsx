@@ -1,9 +1,10 @@
 import { LoadingOutlined, PlusOutlined } from '@ant-design/icons';
 import { AutoComplete, DatePicker, Input, Select, Spin, Tag } from 'antd';
 import dayjs from 'dayjs';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import type { ConditionNode, QueryOperator, QueryableField } from '../../../entity/query';
+import { getUserShortTimeFormat } from '../../../shared/time';
 
 const { Option } = Select;
 
@@ -26,6 +27,9 @@ export const ConditionEditorComponent = ({
   const [localFields, setLocalFields] = useState<QueryableField[]>(fields);
   const [isLocalSearching, setIsLocalSearching] = useState(false);
   const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+
+  // Get user's time format preference
+  const timeFormat = useMemo(() => getUserShortTimeFormat(), []);
 
   // Functions
   const debouncedSearchFields = async (searchTerm?: string) => {
@@ -285,7 +289,11 @@ export const ConditionEditorComponent = ({
     ) {
       return (
         <DatePicker
-          showTime
+          showTime={{
+            format: timeFormat.use12Hours ? 'h:mm A' : 'HH:mm',
+            use12Hours: timeFormat.use12Hours,
+          }}
+          format={timeFormat.format}
           value={condition?.value ? dayjs(condition.value as string) : null}
           onChange={(date) => {
             handleValueChange(date ? date.toISOString() : '');

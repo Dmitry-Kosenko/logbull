@@ -1,9 +1,10 @@
 import { LoadingOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { Checkbox, Popconfirm, Spin } from 'antd';
 import dayjs from 'dayjs';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { type LogItem } from '../../../entity/query';
+import { getUserTimeFormatWithMs } from '../../../shared/time';
 
 const STORAGE_KEY = 'logbull-message-length';
 
@@ -84,6 +85,9 @@ export const QueryResultsComponent = ({
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [messageLength, setMessageLength] = useState<number>(getStoredMessageLength());
   const [showFields, setShowFields] = useState<boolean>(true);
+
+  // Get user's time format preference with milliseconds
+  const timeFormat = useMemo(() => getUserTimeFormatWithMs(), []);
 
   // Refs
   const isLoadingMore = useRef(false);
@@ -365,7 +369,7 @@ export const QueryResultsComponent = ({
                     className="font-mono text-xs text-gray-600"
                   >
                     <div style={{ fontSize: '12px' }}>
-                      {dayjs(log.timestamp).format('MMM D HH:mm:ss.SSS')}
+                      {dayjs(log.timestamp).format(timeFormat.format)}
                     </div>
                     <div className="text-gray-400" style={{ fontSize: '10px' }}>
                       {dayjs(log.timestamp).fromNow()}
