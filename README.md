@@ -185,8 +185,6 @@ This single command will:
 Create a `docker-compose.yml` file with the following configuration:
 
 ```yaml
-version: "3"
-
 services:
   logbull:
     container_name: logbull
