@@ -644,6 +644,7 @@ func Test_InviteUserToProject_MembershipReceivedAfterSignUp(t *testing.T) {
 	signUpRequest := users_dto.SignUpRequestDTO{
 		Email:    inviteEmail,
 		Password: "testpassword123",
+		Name:     "Invited User",
 	}
 
 	resp := test_utils.MakePostRequest(

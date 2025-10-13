@@ -22,6 +22,7 @@ func CreateTestUser(role users_enums.UserRole) *users_dto.SignInResponseDTO {
 	user := &users_models.User{
 		ID:                   userID,
 		Email:                email,
+		Name:                 "Test User",
 		HashedPassword:       &hashedPassword,
 		PasswordCreationTime: time.Now().UTC(),
 		CreatedAt:            time.Now().UTC(),

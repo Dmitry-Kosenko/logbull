@@ -5,5 +5,6 @@ export interface AuditLog {
   message: string;
   createdAt: string;
   userEmail?: string;
+  userName?: string;
   projectName?: string;
 }

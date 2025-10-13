@@ -21,6 +21,7 @@ func Test_SignUpUser_WithValidData_UserCreated(t *testing.T) {
 	request := users_dto.SignUpRequestDTO{
 		Email:    "test" + uuid.New().String() + "@example.com",
 		Password: "testpassword123",
+		Name:     "Test User",
 	}
 
 	test_utils.MakePostRequest(t, router, "/api/v1/users/signup", "", request, http.StatusOK)
@@ -47,6 +48,7 @@ func Test_SignUpUser_WithDuplicateEmail_ReturnsBadRequest(t *testing.T) {
 	request := users_dto.SignUpRequestDTO{
 		Email:    email,
 		Password: "testpassword123",
+		Name:     "Test User",
 	}
 
 	// First signup
@@ -68,12 +70,14 @@ func Test_SignUpUser_WithValidationErrors_ReturnsBadRequest(t *testing.T) {
 			name: "missing email",
 			request: users_dto.SignUpRequestDTO{
 				Password: "testpassword123",
+				Name:     "Test User",
 			},
 		},
 		{
 			name: "missing password",
 			request: users_dto.SignUpRequestDTO{
 				Email: "test@example.com",
+				Name:  "Test User",
 			},
 		},
 		{
@@ -81,6 +85,14 @@ func Test_SignUpUser_WithValidationErrors_ReturnsBadRequest(t *testing.T) {
 			request: users_dto.SignUpRequestDTO{
 				Email:    "test@example.com",
 				Password: "short",
+				Name:     "Test User",
+			},
+		},
+		{
+			name: "missing name",
+			request: users_dto.SignUpRequestDTO{
+				Email:    "test@example.com",
+				Password: "testpassword123",
 			},
 		},
 	}
@@ -101,6 +113,7 @@ func Test_SignInUser_WithValidCredentials_ReturnsToken(t *testing.T) {
 	signupRequest := users_dto.SignUpRequestDTO{
 		Email:    email,
 		Password: password,
+		Name:     "Test User",
 	}
 	test_utils.MakePostRequest(t, router, "/api/v1/users/signup", "", signupRequest, http.StatusOK)
 
@@ -133,6 +146,7 @@ func Test_SignInUser_WithWrongPassword_ReturnsBadRequest(t *testing.T) {
 	signupRequest := users_dto.SignUpRequestDTO{
 		Email:    email,
 		Password: "testpassword123",
+		Name:     "Test User",
 	}
 	test_utils.MakePostRequest(t, router, "/api/v1/users/signup", "", signupRequest, http.StatusOK)
 
@@ -267,6 +281,7 @@ func Test_ChangeUserPassword_WithValidData_PasswordChanged(t *testing.T) {
 	signupRequest := users_dto.SignUpRequestDTO{
 		Email:    email,
 		Password: oldPassword,
+		Name:     "Test User",
 	}
 	test_utils.MakePostRequest(t, router, "/api/v1/users/signup", "", signupRequest, http.StatusOK)
 
@@ -520,4 +535,108 @@ func Test_InviteUser_WithDuplicateEmail_ReturnsBadRequest(t *testing.T) {
 		http.StatusBadRequest,
 	)
 	assert.Contains(t, string(resp.Body), "already exists")
+}
+
+func Test_UpdateUserInfo_WithValidName_NameUpdated(t *testing.T) {
+	router := createUserTestRouter()
+	testUser := users_testing.CreateTestUser(users_enums.UserRoleMember)
+
+	newName := "Updated Name"
+	request := users_dto.UpdateUserInfoRequestDTO{
+		Name: &newName,
+	}
+
+	test_utils.MakePutRequest(
+		t,
+		router,
+		"/api/v1/users/me",
+		"Bearer "+testUser.Token,
+		request,
+		http.StatusOK,
+	)
+
+	var profile users_dto.UserProfileResponseDTO
+	test_utils.MakeGetRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/users/me",
+		"Bearer "+testUser.Token,
+		http.StatusOK,
+		&profile,
+	)
+
+	assert.Equal(t, "Updated Name", profile.Name)
+}
+
+func Test_UpdateUserInfo_WithValidEmail_EmailUpdated(t *testing.T) {
+	router := createUserTestRouter()
+	testUser := users_testing.CreateTestUser(users_enums.UserRoleMember)
+
+	newEmail := "newemail" + uuid.New().String() + "@example.com"
+	request := users_dto.UpdateUserInfoRequestDTO{
+		Email: &newEmail,
+	}
+
+	test_utils.MakePutRequest(
+		t,
+		router,
+		"/api/v1/users/me",
+		"Bearer "+testUser.Token,
+		request,
+		http.StatusOK,
+	)
+
+	var profile users_dto.UserProfileResponseDTO
+	test_utils.MakeGetRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/users/me",
+		"Bearer "+testUser.Token,
+		http.StatusOK,
+		&profile,
+	)
+
+	assert.Equal(t, newEmail, profile.Email)
+}
+
+func Test_UpdateUserInfo_WithTakenEmail_ReturnsBadRequest(t *testing.T) {
+	router := createUserTestRouter()
+	user1 := users_testing.CreateTestUser(users_enums.UserRoleMember)
+	user2 := users_testing.CreateTestUser(users_enums.UserRoleMember)
+
+	request := users_dto.UpdateUserInfoRequestDTO{
+		Email: &user2.Email,
+	}
+
+	resp := test_utils.MakePutRequest(
+		t,
+		router,
+		"/api/v1/users/me",
+		"Bearer "+user1.Token,
+		request,
+		http.StatusBadRequest,
+	)
+
+	assert.Contains(t, string(resp.Body), "already taken")
+}
+
+func Test_UpdateUserInfo_WhenAdminTriesToChangeEmail_ReturnsBadRequest(t *testing.T) {
+	router := createUserTestRouter()
+	adminUser := users_testing.ReacreateInitAdminAndGetAccess()
+
+	newEmail := "newemail@example.com"
+	request := users_dto.UpdateUserInfoRequestDTO{
+		Email: &newEmail,
+	}
+
+	resp := test_utils.MakePutRequest(
+		t,
+		router,
+		"/api/v1/users/me",
+		"Bearer "+adminUser.Token,
+		request,
+		http.StatusBadRequest,
+	)
+
+	assert.Contains(t, string(resp.Body), "admin email cannot be changed")
 }

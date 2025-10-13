@@ -189,10 +189,14 @@ export function UsersComponent({ contentHeight }: Props) {
 
   const columns: ColumnsType<UserProfile> = [
     {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
+      title: 'User',
+      key: 'user',
       width: 350,
+      render: (_, record: UserProfile) => (
+        <div>
+          {record.name} ({record.email})
+        </div>
+      ),
     },
     {
       title: 'System role',

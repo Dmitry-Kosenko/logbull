@@ -10,6 +10,7 @@ import type { SetAdminPasswordRequest } from '../model/SetAdminPasswordRequest';
 import type { SignInRequest } from '../model/SignInRequest';
 import type { SignInResponse } from '../model/SignInResponse';
 import type { SignUpRequest } from '../model/SignUpRequest';
+import type { UpdateUserInfoRequest } from '../model/UpdateUserInfoRequest';
 import type { UserProfile } from '../model/UserProfile';
 
 const listeners: (() => void)[] = [];
@@ -95,6 +96,12 @@ export const userApi = {
   async getCurrentUser(): Promise<UserProfile> {
     const requestOptions: RequestOptions = new RequestOptions();
     return apiHelper.fetchGetJson(`${getApplicationServer()}/api/v1/users/me`, requestOptions);
+  },
+
+  async updateUserInfo(request: UpdateUserInfoRequest): Promise<{ message: string }> {
+    const requestOptions: RequestOptions = new RequestOptions();
+    requestOptions.setBody(JSON.stringify(request));
+    return apiHelper.fetchPutJson(`${getApplicationServer()}/api/v1/users/me`, requestOptions);
   },
 
   isAuthorized: (): boolean => !!accessTokenHelper.getAccessToken(),

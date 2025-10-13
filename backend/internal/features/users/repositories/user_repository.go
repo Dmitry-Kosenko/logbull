@@ -63,6 +63,7 @@ func (r *UserRepository) CreateInitialAdmin() error {
 	admin = &users_models.User{
 		ID:                   uuid.New(),
 		Email:                "admin",
+		Name:                 "Admin",
 		HashedPassword:       nil,
 		PasswordCreationTime: time.Now().UTC(),
 		Role:                 users_enums.UserRoleAdmin,
@@ -132,4 +133,23 @@ func (r *UserRepository) RenameUserEmailForTests(oldEmail, newEmail string) erro
 	}
 
 	return nil
+}
+
+func (r *UserRepository) UpdateUserInfo(userID uuid.UUID, name *string, email *string) error {
+	updates := make(map[string]any)
+
+	if name != nil {
+		updates["name"] = *name
+	}
+	if email != nil {
+		updates["email"] = *email
+	}
+
+	if len(updates) == 0 {
+		return nil
+	}
+
+	return storage.GetDb().Model(&users_models.User{}).
+		Where("id = ?", userID).
+		Updates(updates).Error
 }

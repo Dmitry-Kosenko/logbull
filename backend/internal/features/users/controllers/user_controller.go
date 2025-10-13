@@ -27,6 +27,7 @@ func (c *UserController) RegisterRoutes(router *gin.RouterGroup) {
 
 func (c *UserController) RegisterProtectedRoutes(router *gin.RouterGroup) {
 	router.GET("/users/me", c.GetCurrentUser)
+	router.PUT("/users/me", c.UpdateUserInfo)
 	router.PUT("/users/change-password", c.ChangePassword)
 	router.POST("/users/invite", c.InviteUser)
 }
@@ -224,4 +225,42 @@ func (c *UserController) GetCurrentUser(ctx *gin.Context) {
 
 	profile := c.userService.GetCurrentUserProfile(user)
 	ctx.JSON(http.StatusOK, profile)
+}
+
+// UpdateUserInfo
+// @Summary Update current user information
+// @Description Update name and/or email for the currently authenticated user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body users_dto.UpdateUserInfoRequestDTO true "User info update data"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Router /users/me [put]
+func (c *UserController) UpdateUserInfo(ctx *gin.Context) {
+	user, ok := user_middleware.GetUserFromContext(ctx)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	var request user_dto.UpdateUserInfoRequestDTO
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	if request.Name == nil && request.Email == nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "No fields to update"})
+		return
+	}
+
+	if err := c.userService.UpdateUserInfo(user.ID, &request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "User info updated successfully"})
 }

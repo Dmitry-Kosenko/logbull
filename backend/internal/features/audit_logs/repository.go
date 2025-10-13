@@ -28,6 +28,7 @@ func (r *AuditLogRepository) GetGlobal(limit, offset int, beforeDate *time.Time)
 			al.message,
 			al.created_at,
 			u.email as user_email,
+			u.name as user_name,
 			p.name as project_name
 		FROM audit_logs al
 		LEFT JOIN users u ON al.user_id = u.id
@@ -63,6 +64,7 @@ func (r *AuditLogRepository) GetByUser(
 			al.message,
 			al.created_at,
 			u.email as user_email,
+			u.name as user_name,
 			p.name as project_name
 		FROM audit_logs al
 		LEFT JOIN users u ON al.user_id = u.id
@@ -99,6 +101,7 @@ func (r *AuditLogRepository) GetByProject(
 			al.message,
 			al.created_at,
 			u.email as user_email,
+			u.name as user_name,
 			p.name as project_name
 		FROM audit_logs al
 		LEFT JOIN users u ON al.user_id = u.id

@@ -1,0 +1,9 @@
+---
+alwaysApply: true
+---
+
+Use FSD for the project.
+
+In /entity folder place API and models
+In /features folder separate features components
+In /widgets combinations of features (like composition)

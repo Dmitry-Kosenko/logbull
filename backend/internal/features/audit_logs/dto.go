@@ -26,5 +26,6 @@ type AuditLogDTO struct {
 	Message     string     `json:"message"     gorm:"column:message"`
 	CreatedAt   time.Time  `json:"createdAt"   gorm:"column:created_at"`
 	UserEmail   *string    `json:"userEmail"   gorm:"column:user_email"`
+	UserName    *string    `json:"userName"    gorm:"column:user_name"`
 	ProjectName *string    `json:"projectName" gorm:"column:project_name"`
 }

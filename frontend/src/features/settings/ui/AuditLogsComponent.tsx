@@ -98,18 +98,27 @@ export function AuditLogsComponent({ scrollContainerRef: externalScrollRef }: Pr
   const columns: ColumnsType<AuditLog> = [
     {
       title: 'User',
-      dataIndex: 'userEmail',
-      key: 'userEmail',
-      width: 250,
-      render: (userEmail: string | undefined) => (
-        <span
-          className={`inline-block rounded-full px-1.5 py-0.5 text-xs font-medium ${
-            userEmail ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
-          }`}
-        >
-          {userEmail || 'System'}
-        </span>
-      ),
+      key: 'user',
+      width: 300,
+      render: (_, record: AuditLog) => {
+        if (!record.userEmail && !record.userName) {
+          return (
+            <span className="inline-block rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600">
+              System
+            </span>
+          );
+        }
+
+        const displayText = record.userName
+          ? `${record.userName} (${record.userEmail})`
+          : record.userEmail;
+
+        return (
+          <span className="inline-block rounded-full bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-800">
+            {displayText}
+          </span>
+        );
+      },
     },
     {
       title: 'Message',

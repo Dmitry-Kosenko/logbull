@@ -48,7 +48,7 @@ func (r *MembershipRepository) GetProjectMembers(
 
 	err := storage.GetDb().
 		Table("project_memberships pm").
-		Select("pm.id, pm.user_id, u.email, pm.role, pm.created_at").
+		Select("pm.id, pm.user_id, u.email, u.name, pm.role, pm.created_at").
 		Joins("JOIN users u ON pm.user_id = u.id").
 		Where("pm.project_id = ?", projectID).
 		Order("pm.created_at ASC").

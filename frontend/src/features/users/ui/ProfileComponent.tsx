@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { userApi } from '../../../entity/users/api/userApi';
 import type { ChangePasswordRequest } from '../../../entity/users/model/ChangePasswordRequest';
 import type { SignInRequest } from '../../../entity/users/model/SignInRequest';
+import type { UpdateUserInfoRequest } from '../../../entity/users/model/UpdateUserInfoRequest';
 import type { UserProfile } from '../../../entity/users/model/UserProfile';
 import { UserRole } from '../../../entity/users/model/UserRole';
 
@@ -28,6 +29,13 @@ export function ProfileComponent({ contentHeight }: Props) {
   const [user, setUser] = useState<UserProfile | undefined>(undefined);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
+  // Profile edit state
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [editNameError, setEditNameError] = useState(false);
+  const [editEmailError, setEditEmailError] = useState(false);
+
   // Password change form state
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -39,15 +47,21 @@ export function ProfileComponent({ contentHeight }: Props) {
   const [confirmPasswordError, setConfirmPasswordError] = useState(false);
 
   useEffect(() => {
+    loadUserProfile();
+  }, []);
+
+  const loadUserProfile = () => {
     userApi
       .getCurrentUser()
       .then((user) => {
         setUser(user);
+        setEditName(user.name);
+        setEditEmail(user.email);
       })
       .catch((error) => {
         message.error(error.message);
       });
-  }, []);
+  };
 
   const validatePasswordFields = (): boolean => {
     let isValid = true;
@@ -124,6 +138,59 @@ export function ProfileComponent({ contentHeight }: Props) {
     }
   };
 
+  const handleProfileUpdate = async () => {
+    // Validate name
+    if (!editName || editName.trim() === '') {
+      setEditNameError(true);
+      message.error('Name is required');
+      return;
+    }
+    setEditNameError(false);
+
+    // Validate email (only if not admin)
+    if (user?.email !== 'admin') {
+      if (!editEmail || editEmail.trim() === '') {
+        setEditEmailError(true);
+        message.error('Email is required');
+        return;
+      }
+      setEditEmailError(false);
+    }
+
+    setIsUpdatingProfile(true);
+
+    try {
+      const request: UpdateUserInfoRequest = {};
+
+      // Only include fields that changed
+      if (editName !== user?.name) {
+        request.name = editName;
+      }
+      // Only include email if not admin and changed
+      if (user?.email !== 'admin' && editEmail !== user?.email) {
+        request.email = editEmail;
+      }
+
+      // If nothing changed, just show a message
+      if (Object.keys(request).length === 0) {
+        message.info('No changes to save');
+        setIsUpdatingProfile(false);
+        return;
+      }
+
+      await userApi.updateUserInfo(request);
+      message.success('Profile updated successfully');
+
+      // Reload user profile
+      loadUserProfile();
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update profile';
+      message.error(errorMessage);
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
   const handleLogout = () => {
     userApi.logout();
     window.location.reload();
@@ -141,18 +208,61 @@ export function ProfileComponent({ contentHeight }: Props) {
           <div className="mt-5">
             {user ? (
               <>
-                <div className="mb-6 text-sm">
-                  <div className="flex">
-                    <div className="w-[60px] font-medium">ID</div> {user.id}
-                  </div>
-                  <div className="mt-1 flex">
-                    <div className="w-[60px] font-medium">Email</div> {user.email}
-                  </div>
-                  <div className="mt-1 flex items-center">
-                    <div className="w-[60px] font-medium">Role</div>
-                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
-                      {getRoleDisplayText(user.role)}
-                    </span>
+                <div className="mb-6">
+                  <h3 className="mb-4 text-lg font-semibold">Profile Information</h3>
+                  <div className="max-w-md">
+                    <div className="mb-2 text-xs font-semibold">User ID</div>
+                    <div className="mb-4 text-sm text-gray-600">{user.id}</div>
+
+                    <div className="mb-1 text-xs font-semibold">Name</div>
+                    <Input
+                      value={editName}
+                      onChange={(e) => {
+                        setEditNameError(false);
+                        setEditName(e.currentTarget.value);
+                      }}
+                      status={editNameError ? 'error' : undefined}
+                      placeholder="Enter your name"
+                      className="mb-4"
+                    />
+
+                    <div className="mt-2 mb-1 text-xs font-semibold">Email</div>
+                    <Input
+                      value={editEmail}
+                      onChange={(e) => {
+                        setEditEmailError(false);
+                        setEditEmail(e.currentTarget.value.trim().toLowerCase());
+                      }}
+                      status={editEmailError ? 'error' : undefined}
+                      placeholder="Enter your email"
+                      type="email"
+                      className="mb-4"
+                      disabled={user.email === 'admin'}
+                    />
+                    {user.email === 'admin' && (
+                      <div className="mb-4 text-xs text-gray-500">
+                        Admin email cannot be changed
+                      </div>
+                    )}
+
+                    <div className="mt-2 mb-1 text-xs font-semibold">Role</div>
+                    <div className="mb-4">
+                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+                        {getRoleDisplayText(user.role)}
+                      </span>
+                    </div>
+
+                    {(editName !== user.name || editEmail !== user.email) && (
+                      <Button
+                        type="primary"
+                        onClick={handleProfileUpdate}
+                        loading={isUpdatingProfile}
+                        disabled={isUpdatingProfile}
+                        className="border-emerald-600 bg-emerald-600 hover:border-emerald-700 hover:bg-emerald-700"
+                      >
+                        Save changes
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -184,7 +294,7 @@ export function ProfileComponent({ contentHeight }: Props) {
                       }}
                     />
 
-                    <div className="my-1 text-xs font-semibold">Confirm New Password</div>
+                    <div className="mt-2 mb-1 text-xs font-semibold">Confirm New Password</div>
                     <Input.Password
                       placeholder="Confirm new password"
                       value={confirmPassword}
@@ -204,15 +314,17 @@ export function ProfileComponent({ contentHeight }: Props) {
 
                     <div className="mt-3" />
 
-                    <Button
-                      type="primary"
-                      onClick={handlePasswordChange}
-                      loading={isChangingPassword}
-                      disabled={isChangingPassword}
-                      className="border-emerald-600 bg-emerald-600 hover:border-emerald-700 hover:bg-emerald-700"
-                    >
-                      {isChangingPassword ? 'Changing Password...' : 'Change Password'}
-                    </Button>
+                    {(newPassword || confirmPassword) && (
+                      <Button
+                        type="primary"
+                        onClick={handlePasswordChange}
+                        loading={isChangingPassword}
+                        disabled={isChangingPassword}
+                        className="border-emerald-600 bg-emerald-600 hover:border-emerald-700 hover:bg-emerald-700"
+                      >
+                        {isChangingPassword ? 'Changing password...' : 'Change password'}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </>

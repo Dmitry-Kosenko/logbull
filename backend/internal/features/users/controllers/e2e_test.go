@@ -68,6 +68,7 @@ func Test_AdminLifecycleE2E_CompletesSuccessfully(t *testing.T) {
 	userSignupRequest := users_dto.SignUpRequestDTO{
 		Email:    invitedUserEmail,
 		Password: "userpassword123",
+		Name:     "Invited User",
 	}
 	test_utils.MakePostRequest(t, router, "/api/v1/users/signup", "", userSignupRequest, http.StatusOK)
 
@@ -110,6 +111,7 @@ func Test_UserLifecycleE2E_CompletesSuccessfully(t *testing.T) {
 	userSignupRequest := users_dto.SignUpRequestDTO{
 		Email:    userEmail,
 		Password: "userpassword123",
+		Name:     "Test User",
 	}
 
 	test_utils.MakePostRequest(t, router, "/api/v1/users/signup", "", userSignupRequest, http.StatusOK)

@@ -12,6 +12,7 @@ interface SignUpComponentProps {
 
 export function SignUpComponent({ onSwitchToSignIn }: SignUpComponentProps): JSX.Element {
   const { message } = App.useApp();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -20,6 +21,7 @@ export function SignUpComponent({ onSwitchToSignIn }: SignUpComponentProps): JSX
 
   const [isLoading, setLoading] = useState(false);
 
+  const [nameError, setNameError] = useState(false);
   const [isEmailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [confirmPasswordError, setConfirmPasswordError] = useState(false);
@@ -27,6 +29,13 @@ export function SignUpComponent({ onSwitchToSignIn }: SignUpComponentProps): JSX
   const [signUpError, setSignUpError] = useState('');
 
   const validateFieldsForSignUp = (): boolean => {
+    if (!name || name.trim() === '') {
+      setNameError(true);
+      message.error('Name is required');
+      return false;
+    }
+    setNameError(false);
+
     if (!email) {
       setEmailError(true);
       return false;
@@ -72,6 +81,7 @@ export function SignUpComponent({ onSwitchToSignIn }: SignUpComponentProps): JSX
         await userApi.signUp({
           email,
           password,
+          name,
         });
         await userApi.signIn({ email, password });
       } catch (e) {
@@ -85,6 +95,17 @@ export function SignUpComponent({ onSwitchToSignIn }: SignUpComponentProps): JSX
   return (
     <div className="w-full max-w-[300px]">
       <div className="mb-5 text-center text-2xl font-bold">Sign up</div>
+
+      <div className="my-1 text-xs font-semibold">Your name</div>
+      <Input
+        placeholder="John Doe"
+        value={name}
+        onChange={(e) => {
+          setNameError(false);
+          setName(e.currentTarget.value);
+        }}
+        status={nameError ? 'error' : undefined}
+      />
 
       <div className="my-1 text-xs font-semibold">Your email</div>
       <Input

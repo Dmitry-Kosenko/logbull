@@ -55,6 +55,7 @@ type ProjectMemberResponseDTO struct {
 	ID        uuid.UUID               `json:"id"`
 	UserID    uuid.UUID               `json:"userId"`
 	Email     string                  `json:"email"` // Populated from user join
+	Name      string                  `json:"name"`  // Populated from user join
 	Role      users_enums.ProjectRole `json:"role"`
 	CreatedAt time.Time               `json:"createdAt"`
 }

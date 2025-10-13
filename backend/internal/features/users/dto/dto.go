@@ -11,6 +11,7 @@ import (
 type SignUpRequestDTO struct {
 	Email    string `json:"email"    binding:"required"`
 	Password string `json:"password" binding:"required,min=8"`
+	Name     string `json:"name"     binding:"required"`
 }
 
 type SignInRequestDTO struct {
@@ -36,6 +37,11 @@ type ChangePasswordRequestDTO struct {
 	NewPassword string `json:"newPassword" binding:"required,min=8"`
 }
 
+type UpdateUserInfoRequestDTO struct {
+	Name  *string `json:"name"`
+	Email *string `json:"email" binding:"omitempty,email"`
+}
+
 type InviteUserRequestDTO struct {
 	Email               string                   `json:"email"               binding:"required,email"`
 	IntendedProjectID   *uuid.UUID               `json:"intendedProjectId"`
@@ -53,6 +59,7 @@ type InviteUserResponseDTO struct {
 type UserProfileResponseDTO struct {
 	ID        uuid.UUID            `json:"id"`
 	Email     string               `json:"email"`
+	Name      string               `json:"name"`
 	Role      users_enums.UserRole `json:"role"`
 	IsActive  bool                 `json:"isActive"`
 	CreatedAt time.Time            `json:"createdAt"`

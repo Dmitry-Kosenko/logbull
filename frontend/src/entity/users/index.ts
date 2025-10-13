@@ -12,6 +12,7 @@ export type { IsAdminHasPasswordResponse } from './model/IsAdminHasPasswordRespo
 export type { ChangePasswordRequest } from './model/ChangePasswordRequest';
 export type { InviteUserRequest } from './model/InviteUserRequest';
 export type { InviteUserResponse } from './model/InviteUserResponse';
+export type { UpdateUserInfoRequest } from './model/UpdateUserInfoRequest';
 export type { UserProfile } from './model/UserProfile';
 export type { ListUsersRequest } from './model/ListUsersRequest';
 export type { ListUsersResponse } from './model/ListUsersResponse';

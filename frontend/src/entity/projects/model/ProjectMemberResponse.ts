@@ -4,6 +4,7 @@ export interface ProjectMemberResponse {
   id: string;
   userId: string;
   email: string;
+  name: string;
   role: ProjectRole;
   createdAt: Date;
 }

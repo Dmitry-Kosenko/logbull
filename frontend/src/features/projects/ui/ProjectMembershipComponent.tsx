@@ -275,8 +275,8 @@ export function ProjectMembershipComponent({ contentHeight, projectResponse, use
         <div className="flex items-center">
           <UserOutlined className="mr-2 text-gray-400" />
           <div>
-            <div className="font-medium">{record.email}</div>
-            <div className="text-xs text-gray-500">ID: {record.userId}</div>
+            <div className="font-medium">{record.name}</div>
+            <div className="text-xs text-gray-500">{record.email}</div>
           </div>
         </div>
       ),
@@ -569,7 +569,8 @@ export function ProjectMembershipComponent({ contentHeight, projectResponse, use
                           <div className="flex items-center">
                             <UserOutlined className="mr-2 text-gray-400" />
                             <div>
-                              <div className="font-medium">{member.email}</div>
+                              <div className="font-medium">{member.name}</div>
+                              <div className="text-xs text-gray-500">{member.email}</div>
                             </div>
                           </div>
                         ),

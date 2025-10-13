@@ -55,6 +55,11 @@ func (s *UserService) SignUp(request *users_dto.SignUpRequestDTO) error {
 			return fmt.Errorf("failed to activate user: %w", err)
 		}
 
+		name := request.Name
+		if err := s.userRepository.UpdateUserInfo(existingUser.ID, &name, nil); err != nil {
+			return fmt.Errorf("failed to update name: %w", err)
+		}
+
 		s.auditLogWriter.WriteAuditLog(
 			fmt.Sprintf("Invited user completed registration: %s", existingUser.Email),
 			&existingUser.ID,
@@ -79,6 +84,7 @@ func (s *UserService) SignUp(request *users_dto.SignUpRequestDTO) error {
 	user := &users_models.User{
 		ID:                   uuid.New(),
 		Email:                request.Email,
+		Name:                 request.Name,
 		HashedPassword:       &hashedPasswordStr,
 		PasswordCreationTime: time.Now().UTC(),
 		Role:                 users_enums.UserRoleMember,
@@ -336,6 +342,7 @@ func (s *UserService) InviteUser(
 	user := &users_models.User{
 		ID:                   uuid.New(),
 		Email:                request.Email,
+		Name:                 "User",
 		HashedPassword:       nil, // No password yet
 		PasswordCreationTime: time.Now().UTC(),
 		Role:                 users_enums.UserRoleMember,
@@ -378,8 +385,40 @@ func (s *UserService) GetCurrentUserProfile(user *users_models.User) *users_dto.
 	return &users_dto.UserProfileResponseDTO{
 		ID:        user.ID,
 		Email:     user.Email,
+		Name:      user.Name,
 		Role:      user.Role,
 		IsActive:  user.IsActiveUser(),
 		CreatedAt: user.CreatedAt,
 	}
+}
+
+func (s *UserService) UpdateUserInfo(
+	userID uuid.UUID,
+	request *users_dto.UpdateUserInfoRequestDTO,
+) error {
+	user, err := s.userRepository.GetUserByID(userID)
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if user.Email == "admin" && request.Email != nil && *request.Email != user.Email {
+		return errors.New("admin email cannot be changed")
+	}
+
+	if request.Email != nil && *request.Email != user.Email {
+		existingUser, err := s.userRepository.GetUserByEmail(*request.Email)
+		if err != nil {
+			return fmt.Errorf("failed to check email: %w", err)
+		}
+		if existingUser != nil {
+			return errors.New("email is already taken by another user")
+		}
+	}
+
+	if err := s.userRepository.UpdateUserInfo(userID, request.Name, request.Email); err != nil {
+		return fmt.Errorf("failed to update user info: %w", err)
+	}
+
+	s.auditLogWriter.WriteAuditLog("User info updated", &userID, nil)
+	return nil
 }

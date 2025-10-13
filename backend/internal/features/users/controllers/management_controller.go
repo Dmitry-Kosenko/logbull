@@ -70,6 +70,7 @@ func (c *ManagementController) GetUsers(ctx *gin.Context) {
 		userProfiles[i] = user_dto.UserProfileResponseDTO{
 			ID:        u.ID,
 			Email:     u.Email,
+			Name:      u.Name,
 			Role:      u.Role,
 			IsActive:  u.IsActiveUser(),
 			CreatedAt: u.CreatedAt,
@@ -119,6 +120,7 @@ func (c *ManagementController) GetUserProfile(ctx *gin.Context) {
 	profile := user_dto.UserProfileResponseDTO{
 		ID:        user.ID,
 		Email:     user.Email,
+		Name:      user.Name,
 		Role:      user.Role,
 		IsActive:  user.IsActiveUser(),
 		CreatedAt: user.CreatedAt,

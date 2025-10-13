@@ -10,6 +10,7 @@ import (
 type User struct {
 	ID                   uuid.UUID              `json:"id"`
 	Email                string                 `json:"email"`
+	Name                 string                 `json:"name"`
 	HashedPassword       *string                `json:"-"         gorm:"column:hashed_password"`
 	PasswordCreationTime time.Time              `json:"-"         gorm:"column:password_creation_time"`
 	Role                 users_enums.UserRole   `json:"role"`
