@@ -47,7 +47,7 @@ logger.info("User logged in successfully", fields={
 })
 ```
 
-See more examples on Python, Go, Java, JavaScript, PHP, etc. here - https://logbull.com/#how-to-use-in-code
+See more examples on <a href="https://logbull.com?language_example=python#how-to-use-in-code" target="_blank">Python</a>, <a href="https://logbull.com?language_example=go#how-to-use-in-code" target="_blank">Go</a>, <a href="https://logbull.com?language_example=java#how-to-use-in-code" target="_blank">Java</a>, <a href="https://logbull.com?language_example=javascript#how-to-use-in-code" target="_blank">JavaScript</a>, <a href="https://logbull.com?language_example=php#how-to-use-in-code" target="_blank">PHP</a>, <a href="https://logbull.com?language_example=csharp#how-to-use-in-code" target="_blank">C#</a>, <a href="https://logbull.com?language_example=ruby#how-to-use-in-code" target="_blank">Ruby</a>, <a href="https://logbull.com?language_example=rust#how-to-use-in-code" target="_blank">Rust</a> and <a href="https://logbull.com?language_example=curl#how-to-use-in-code" target="_blank">cURL</a> here - https://logbull.com/#how-to-use-in-code
 
 ---
 
@@ -66,14 +66,15 @@ Log Bull is an Apache 2.0 licensed, self-hosted log collection system designed f
 
 The system supports virtually any language that can send HTTP requests. You don't need to change your existing logging code — just add Log Bull as an additional handler to your current logger.
 
-- **Python**: Compatible with standard logging libraries
-- **Go**: Native support with structured logging
-- **Java**: Support for popular Java logging frameworks (Log4j, Logback, SLF4J)
-- **JavaScript**: Winston, Bunyan, and other Node.js logging libraries
-- **C#/.NET**: Serilog, NLog, and Microsoft.Extensions.Logging
-- **PHP**: Monolog and PSR-3 compatible loggers
-- **Ruby**: Standard Logger, Lograge, and Rails logging
-- **Rust**: Support for popular Rust logging frameworks (log, env_logger, tracing)
+- **<a href="https://logbull.com?language_example=python#how-to-use-in-code" target="_blank">Python</a>**: LogBullLogger, logging (standard library), Loguru, Structlog
+- **<a href="https://logbull.com?language_example=go#how-to-use-in-code" target="_blank">Go</a>**: LogBull native, slog, Zap, Logrus
+- **<a href="https://logbull.com?language_example=java#how-to-use-in-code" target="_blank">Java</a>**: Spring Boot, Logback + SLF4J, LogBull native
+- **<a href="https://logbull.com?language_example=javascript#how-to-use-in-code" target="_blank">JavaScript/TypeScript</a>**: LogBull native, Winston, Pino
+- **<a href="https://logbull.com?language_example=csharp#how-to-use-in-code" target="_blank">C#/.NET</a>**: LogBull native, Microsoft.Extensions.Logging, Serilog
+- **<a href="https://logbull.com?language_example=php#how-to-use-in-code" target="_blank">PHP</a>**: LogBull native, Monolog, PSR-3, Laravel
+- **<a href="https://logbull.com?language_example=ruby#how-to-use-in-code" target="_blank">Ruby</a>**
+- **<a href="https://logbull.com?language_example=rust#how-to-use-in-code" target="_blank">Rust</a>**
+- **<a href="https://logbull.com?language_example=curl#how-to-use-in-code" target="_blank">cURL</a>**: Direct HTTP API access
 - **And many more**: Supports any application that can send HTTP requests
 
 ### 🎯 **Project Management**
