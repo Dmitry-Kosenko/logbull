@@ -6,7 +6,19 @@ import {
   UserAddOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { App, Button, Input, Modal, Popconfirm, Select, Spin, Table, Tag, Tooltip } from 'antd';
+import {
+  App,
+  AutoComplete,
+  Button,
+  Input,
+  Modal,
+  Popconfirm,
+  Select,
+  Spin,
+  Table,
+  Tag,
+  Tooltip,
+} from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
@@ -23,6 +35,7 @@ import type {
 import { projectMembershipApi } from '../../../entity/projects';
 import { AddMemberStatusEnum } from '../../../entity/projects/model/AddMemberStatus';
 import type { UserProfile } from '../../../entity/users';
+import { userManagementApi } from '../../../entity/users/api/userManagementApi';
 import { ProjectRole } from '../../../entity/users/model/ProjectRole';
 import { UserRole } from '../../../entity/users/model/UserRole';
 import { StringUtils } from '../../../shared/lib';
@@ -63,6 +76,11 @@ export function ProjectMembershipComponent({ contentHeight, projectResponse, use
 
   // Processing states
   const [removingMembers, setRemovingMembers] = useState<Set<string>>(new Set());
+
+  // User search state (for system admins)
+  const [userSearchResults, setUserSearchResults] = useState<UserProfile[]>([]);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const [searchInputValue, setSearchInputValue] = useState('');
 
   // Permissions check
   const canManageMembers =
@@ -105,6 +123,41 @@ export function ProjectMembershipComponent({ contentHeight, projectResponse, use
       setIsLoadingMembers(false);
     }
   };
+
+  const searchUsers = async (query: string) => {
+    if (user.role !== UserRole.ADMIN) return;
+
+    setIsSearchingUsers(true);
+    try {
+      const response = await userManagementApi.getUsers({
+        limit: 10,
+        query: query || undefined,
+      });
+      // Filter to only show active users
+      const activeUsers = response.users.filter((u) => u.isActive);
+      setUserSearchResults(activeUsers);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? StringUtils.capitalizeFirstLetter(error.message)
+          : 'Failed to search users';
+      message.error(errorMessage);
+      setUserSearchResults([]);
+    } finally {
+      setIsSearchingUsers(false);
+    }
+  };
+
+  // Debounced search effect
+  useEffect(() => {
+    if (user.role !== UserRole.ADMIN || !isAddMemberModalOpen) return;
+
+    const timer = setTimeout(() => {
+      searchUsers(searchInputValue);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchInputValue, isAddMemberModalOpen]);
 
   const handleAddMember = async () => {
     if (!addMemberForm.email.trim()) {
@@ -444,6 +497,8 @@ export function ProjectMembershipComponent({ contentHeight, projectResponse, use
                 setIsAddMemberModalOpen(false);
                 setAddMemberForm({ email: '', role: ProjectRole.MEMBER });
                 setAddMemberEmailError(false);
+                setSearchInputValue('');
+                setUserSearchResults([]);
               }}
               confirmLoading={isAddingMember}
               okText="Add member"
@@ -456,18 +511,55 @@ export function ProjectMembershipComponent({ contentHeight, projectResponse, use
               <div className="py-4">
                 <div className="mb-4">
                   <div className="mb-2 font-medium text-gray-900">Email address</div>
-                  <Input
-                    value={addMemberForm.email}
-                    onChange={(e) => {
-                      setAddMemberEmailError(false);
-                      setAddMemberForm({
-                        ...addMemberForm,
-                        email: e.target.value.toLowerCase().trim(),
-                      });
-                    }}
-                    placeholder="Enter email address"
-                    status={addMemberEmailError ? 'error' : undefined}
-                  />
+                  {user.role === UserRole.ADMIN ? (
+                    <AutoComplete
+                      value={addMemberForm.email}
+                      onChange={(value) => {
+                        setAddMemberEmailError(false);
+                        setAddMemberForm({
+                          ...addMemberForm,
+                          email: value.toLowerCase().trim(),
+                        });
+                        setSearchInputValue(value);
+                      }}
+                      onSelect={(value) => {
+                        setAddMemberForm({
+                          ...addMemberForm,
+                          email: value.toLowerCase().trim(),
+                        });
+                      }}
+                      onFocus={() => {
+                        searchUsers('');
+                      }}
+                      placeholder="Enter email address"
+                      status={addMemberEmailError ? 'error' : undefined}
+                      options={userSearchResults.map((user) => ({
+                        value: user.email,
+                        label: `${user.name} (${user.email})`,
+                      }))}
+                      notFoundContent={
+                        isSearchingUsers ? (
+                          <div className="flex justify-center py-2">
+                            <Spin indicator={<LoadingOutlined spin />} size="small" />
+                          </div>
+                        ) : null
+                      }
+                      style={{ width: '100%' }}
+                    />
+                  ) : (
+                    <Input
+                      value={addMemberForm.email}
+                      onChange={(e) => {
+                        setAddMemberEmailError(false);
+                        setAddMemberForm({
+                          ...addMemberForm,
+                          email: e.target.value.toLowerCase().trim(),
+                        });
+                      }}
+                      placeholder="Enter email address"
+                      status={addMemberEmailError ? 'error' : undefined}
+                    />
+                  )}
                   <div className="mt-1 text-xs text-gray-500">
                     If the user exists, they will be added directly. Otherwise, an invitation will
                     be sent.
