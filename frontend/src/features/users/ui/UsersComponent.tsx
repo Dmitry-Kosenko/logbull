@@ -1,5 +1,5 @@
 import { LoadingOutlined } from '@ant-design/icons';
-import { App, Button, Drawer, Select, Spin, Switch, Table } from 'antd';
+import { App, Button, Drawer, Input, Select, Spin, Switch, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -34,6 +34,8 @@ export function UsersComponent({ contentHeight }: Props) {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [total, setTotal] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [inputValue, setInputValue] = useState('');
 
   const pageSize = 20;
 
@@ -49,6 +51,18 @@ export function UsersComponent({ contentHeight }: Props) {
   useEffect(() => {
     loadUsers(true);
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (inputValue !== searchQuery) {
+        setSearchQuery(inputValue);
+        setHasMore(true);
+        loadUsers(true, inputValue);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [inputValue]);
 
   const handleScroll = useCallback(() => {
     if (!scrollContainerRef.current || isLoadingMore || !hasMore || loadingRef.current) return;
@@ -69,7 +83,7 @@ export function UsersComponent({ contentHeight }: Props) {
     }
   }, [handleScroll]);
 
-  const loadUsers = async (isInitialLoad = false) => {
+  const loadUsers = async (isInitialLoad = false, query?: string) => {
     if (!isInitialLoad && loadingRef.current) {
       return;
     }
@@ -85,9 +99,11 @@ export function UsersComponent({ contentHeight }: Props) {
 
     try {
       const offset = isInitialLoad ? 0 : users.length;
+      const currentQuery = query !== undefined ? query : searchQuery;
       const request: ListUsersRequest = {
         limit: pageSize,
         offset: offset,
+        query: currentQuery || undefined,
       };
 
       const response = await userManagementApi.getUsers(request);
@@ -289,6 +305,16 @@ export function UsersComponent({ contentHeight }: Props) {
             </div>
           </div>
 
+          <div className="mb-4">
+            <Input
+              placeholder="Search by email or name..."
+              allowClear
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              style={{ width: 400 }}
+            />
+          </div>
+
           {isLoading ? (
             <div className="flex h-64 items-center justify-center">
               <Spin indicator={<LoadingOutlined spin />} size="large" />
@@ -307,9 +333,6 @@ export function UsersComponent({ contentHeight }: Props) {
               {isLoadingMore && (
                 <div className="flex justify-center py-4">
                   <Spin indicator={<LoadingOutlined spin />} />
-                  <span className="ml-2 text-sm text-gray-500">
-                    <Spin indicator={<LoadingOutlined spin />} />
-                  </span>
                 </div>
               )}
 

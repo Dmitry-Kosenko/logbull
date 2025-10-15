@@ -74,7 +74,11 @@ func (r *UserRepository) CreateInitialAdmin() error {
 	return storage.GetDb().Create(admin).Error
 }
 
-func (r *UserRepository) GetUsers(limit, offset int, beforeCreatedAt *time.Time) ([]*users_models.User, int64, error) {
+func (r *UserRepository) GetUsers(
+	limit, offset int,
+	beforeCreatedAt *time.Time,
+	query string,
+) ([]*users_models.User, int64, error) {
 	var users []*users_models.User
 	var total int64
 
@@ -82,21 +86,29 @@ func (r *UserRepository) GetUsers(limit, offset int, beforeCreatedAt *time.Time)
 	if beforeCreatedAt != nil {
 		countQuery = countQuery.Where("created_at < ?", *beforeCreatedAt)
 	}
+	if query != "" {
+		searchPattern := "%" + query + "%"
+		countQuery = countQuery.Where("email ILIKE ? OR name ILIKE ?", searchPattern, searchPattern)
+	}
 
 	if err := countQuery.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	query := storage.GetDb().
+	dataQuery := storage.GetDb().
 		Limit(limit).
 		Offset(offset).
 		Order("created_at DESC")
 
 	if beforeCreatedAt != nil {
-		query = query.Where("created_at < ?", *beforeCreatedAt)
+		dataQuery = dataQuery.Where("created_at < ?", *beforeCreatedAt)
+	}
+	if query != "" {
+		searchPattern := "%" + query + "%"
+		dataQuery = dataQuery.Where("email ILIKE ? OR name ILIKE ?", searchPattern, searchPattern)
 	}
 
-	if err := query.Find(&users).Error; err != nil {
+	if err := dataQuery.Find(&users).Error; err != nil {
 		return nil, 0, err
 	}
 

@@ -113,6 +113,75 @@ func Test_GetUsersList_WithInvalidDateFilter_ReturnsBadRequest(t *testing.T) {
 	assert.Contains(t, string(resp.Body), "Invalid query parameters")
 }
 
+func Test_GetUsersList_WithSearchQuery_ReturnsFilteredUsers(t *testing.T) {
+	router := createManagementTestRouter()
+
+	// Create admin user and get token
+	adminUser := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
+
+	// Create test users with specific emails and names
+	user1 := users_testing.CreateTestUser(users_enums.UserRoleMember)
+	user2 := users_testing.CreateTestUser(users_enums.UserRoleMember)
+
+	// Test searching by email (partial match)
+	emailPart := user1.Email[:5]
+	var emailResponse users_dto.ListUsersResponseDTO
+	test_utils.MakeGetRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/users?query="+emailPart,
+		"Bearer "+adminUser.Token,
+		http.StatusOK,
+		&emailResponse,
+	)
+
+	assert.NotNil(t, emailResponse.Users)
+	found := false
+	for _, u := range emailResponse.Users {
+		if u.ID == user1.UserID {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Expected user1 to be in search results")
+
+	// Test case-insensitive search
+	upperEmailPart := user2.Email[:5]
+	var caseInsensitiveResponse users_dto.ListUsersResponseDTO
+	test_utils.MakeGetRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/users?query="+upperEmailPart,
+		"Bearer "+adminUser.Token,
+		http.StatusOK,
+		&caseInsensitiveResponse,
+	)
+
+	assert.NotNil(t, caseInsensitiveResponse.Users)
+	found = false
+	for _, u := range caseInsensitiveResponse.Users {
+		if u.ID == user2.UserID {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Expected user2 to be in case-insensitive search results")
+
+	// Test searching by name
+	var nameResponse users_dto.ListUsersResponseDTO
+	test_utils.MakeGetRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/users?query=Test",
+		"Bearer "+adminUser.Token,
+		http.StatusOK,
+		&nameResponse,
+	)
+
+	assert.NotNil(t, nameResponse.Users)
+	assert.GreaterOrEqual(t, len(nameResponse.Users), 1, "Should find users with 'Test' in name")
+}
+
 func Test_GetUsersList_WithoutAuth_ReturnsUnauthorized(t *testing.T) {
 	router := createManagementTestRouter()
 

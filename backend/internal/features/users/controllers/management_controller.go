@@ -33,6 +33,7 @@ func (c *ManagementController) RegisterRoutes(router *gin.RouterGroup) {
 // @Param limit query int false "Number of items per page" default(20)
 // @Param offset query int false "Page offset" default(0)
 // @Param beforeDate query string false "Filter users created before this date (RFC3339 format)" format(date-time)
+// @Param query query string false "Search by email or name (case-insensitive)"
 // @Success 200 {object} users_dto.ListUsersResponseDTO
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Failure 403 {object} map[string]string "Forbidden"
@@ -58,7 +59,13 @@ func (c *ManagementController) GetUsers(ctx *gin.Context) {
 		request.Offset = 0
 	}
 
-	users, total, err := c.managementService.GetUsers(user, request.Limit, request.Offset, request.BeforeDate)
+	users, total, err := c.managementService.GetUsers(
+		user,
+		request.Limit,
+		request.Offset,
+		request.BeforeDate,
+		request.Query,
+	)
 	if err != nil {
 		ctx.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		return

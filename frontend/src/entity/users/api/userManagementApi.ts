@@ -22,6 +22,9 @@ export const userManagementApi = {
     if (request?.beforeDate) {
       params.append('beforeDate', request.beforeDate);
     }
+    if (request?.query) {
+      params.append('query', request.query);
+    }
 
     if (params.toString()) {
       url += `?${params.toString()}`;

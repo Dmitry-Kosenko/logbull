@@ -78,4 +78,5 @@ type ListUsersRequestDTO struct {
 	Limit      int        `form:"limit"      json:"limit"`
 	Offset     int        `form:"offset"     json:"offset"`
 	BeforeDate *time.Time `form:"beforeDate" json:"beforeDate"`
+	Query      string     `form:"query"      json:"query"`
 }

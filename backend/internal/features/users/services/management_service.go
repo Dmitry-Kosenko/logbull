@@ -26,12 +26,13 @@ func (s *UserManagementService) GetUsers(
 	currentUser *user_models.User,
 	limit, offset int,
 	beforeCreatedAt *time.Time,
+	query string,
 ) ([]*user_models.User, int64, error) {
 	if !currentUser.CanManageUsers() {
 		return nil, 0, errors.New("insufficient permissions to list users")
 	}
 
-	return s.userRepository.GetUsers(limit, offset, beforeCreatedAt)
+	return s.userRepository.GetUsers(limit, offset, beforeCreatedAt, query)
 }
 
 func (s *UserManagementService) GetUserProfile(
