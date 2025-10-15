@@ -21,6 +21,7 @@ func (c *LogQueryController) RegisterRoutes(router *gin.RouterGroup) {
 	queryRoutes.POST("/execute/:projectId", c.ExecuteQuery)
 	queryRoutes.GET("/fields/:projectId", c.GetQueryableFields)
 	queryRoutes.GET("/stats/:projectId", c.GetProjectStats)
+	queryRoutes.GET("/system-stats", c.GetSystemStats)
 }
 
 // ExecuteQuery
@@ -123,7 +124,7 @@ func (c *LogQueryController) GetQueryableFields(ctx *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param projectId path string true "Project ID (UUID format)"
-// @Success 200 {object} logs_core.ProjectLogStats
+// @Success 200 {object} logs_core.LogsStatsDTO
 // @Failure 400 {object} map[string]string
 // @Failure 401 {object} map[string]string
 // @Failure 403 {object} map[string]string
@@ -148,6 +149,37 @@ func (c *LogQueryController) GetProjectStats(ctx *gin.Context) {
 			ctx.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		} else {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get project stats"})
+		}
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+// GetSystemStats
+// @Summary Get system-wide log statistics (ADMIN only)
+// @Description Get statistics about logs across all projects in the system
+// @Tags logs-query
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} logs_core.LogsStatsDTO
+// @Failure 401 {object} map[string]string
+// @Failure 403 {object} map[string]string
+// @Router /logs/query/system-stats [get]
+func (c *LogQueryController) GetSystemStats(ctx *gin.Context) {
+	user, isOk := ctx.MustGet("user").(*users_models.User)
+	if !isOk {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user type in context"})
+		return
+	}
+
+	response, err := c.logQueryService.GetSystemStats(user)
+	if err != nil {
+		if strings.Contains(err.Error(), "insufficient permissions") {
+			ctx.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		} else {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get system stats"})
 		}
 		return
 	}

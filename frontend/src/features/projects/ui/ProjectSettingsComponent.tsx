@@ -7,7 +7,7 @@ import { projectApi } from '../../../entity/projects/api/projectApi';
 import type { Project } from '../../../entity/projects/model/Project';
 import type { ProjectResponse } from '../../../entity/projects/model/ProjectResponse';
 import { queryApi } from '../../../entity/query/api/queryApi';
-import type { ProjectLogStats } from '../../../entity/query/model/ProjectLogStats';
+import type { LogsStats } from '../../../entity/query/model/ProjectLogStats';
 import { ProjectRole } from '../../../entity/users/model/ProjectRole';
 import type { UserProfile } from '../../../entity/users/model/UserProfile';
 import { UserRole } from '../../../entity/users/model/UserRole';
@@ -27,7 +27,7 @@ export function ProjectSettingsComponent({ projectResponse, user, contentHeight 
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Project stats state
-  const [projectStats, setProjectStats] = useState<ProjectLogStats | undefined>(undefined);
+  const [projectStats, setProjectStats] = useState<LogsStats | undefined>(undefined);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
 
   // Scroll container ref for audit logs lazy loading
@@ -809,9 +809,9 @@ export function ProjectSettingsComponent({ projectResponse, user, contentHeight 
                   </div>
                 </div>
 
-                {/* Project Statistics */}
-                <div className="max-w-2xl">
-                  <h2 className="mb-4 text-xl font-bold text-gray-900">Project Statistics</h2>
+                {/* Project statistics */}
+                <div className="max-w-[300px]">
+                  <h2 className="mb-4 text-xl font-bold text-gray-900">Project statistics</h2>
                   {isLoadingStats ? (
                     <div className="flex items-center py-2">
                       <Spin indicator={<LoadingOutlined spin />} />

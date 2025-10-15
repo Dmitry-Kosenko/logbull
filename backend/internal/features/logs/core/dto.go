@@ -69,7 +69,7 @@ type GetQueryableFieldsResponseDTO struct {
 	Fields []QueryableField `json:"fields"`
 }
 
-type ProjectLogStats struct {
+type LogsStatsDTO struct {
 	TotalLogs     int64     `json:"totalLogs"`
 	TotalSizeMB   float64   `json:"totalSizeMb"`
 	OldestLogTime time.Time `json:"oldestLogTime"`

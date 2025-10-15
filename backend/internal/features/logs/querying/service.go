@@ -95,7 +95,7 @@ func (s *LogQueryService) GetQueryableFields(
 func (s *LogQueryService) GetProjectStats(
 	projectID uuid.UUID,
 	user *users_models.User,
-) (*logs_core.ProjectLogStats, error) {
+) (*logs_core.LogsStatsDTO, error) {
 	s.logger.Info("Starting project stats request",
 		"projectId", projectID.String(),
 		"userId", user.ID.String())
@@ -137,6 +137,33 @@ func (s *LogQueryService) GetProjectStats(
 		"newestLogTime", stats.NewestLogTime.Format("2006-01-02T15:04:05.000Z07:00"),
 		"oldestLogTimeIsZero", stats.OldestLogTime.IsZero(),
 		"newestLogTimeIsZero", stats.NewestLogTime.IsZero())
+
+	return stats, nil
+}
+
+func (s *LogQueryService) GetSystemStats(
+	user *users_models.User,
+) (*logs_core.LogsStatsDTO, error) {
+	if !user.CanManageUsers() {
+		return nil, errors.New("insufficient permissions to view system stats")
+	}
+
+	s.logger.Info("Admin user requesting system-wide stats",
+		"userId", user.ID.String(),
+		"userEmail", user.Email)
+
+	stats, err := s.logRepository.GetSystemLogStats()
+	if err != nil {
+		s.logger.Error("Repository failed to get system stats",
+			"userId", user.ID.String(),
+			"error", err.Error())
+		return nil, fmt.Errorf("failed to get system stats: %w", err)
+	}
+
+	s.logger.Info("Successfully retrieved system stats",
+		"userId", user.ID.String(),
+		"totalLogs", stats.TotalLogs,
+		"totalSizeMB", stats.TotalSizeMB)
 
 	return stats, nil
 }

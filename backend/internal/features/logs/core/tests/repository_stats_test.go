@@ -154,3 +154,67 @@ func Test_GetProjectLogStats_WithTwelveHourTimeGap_ReturnsCorrectTimestamps(t *t
 	assert.InDelta(t, expectedGap.Seconds(), actualGap.Seconds(), gapTolerance.Seconds(),
 		"Time gap between oldest and newest log should be approximately 12 hours")
 }
+
+func Test_GetSystemLogStats_WithMultipleProjects_ReturnsAggregatedStats(t *testing.T) {
+	t.Parallel()
+	repository := logs_core.GetLogCoreRepository()
+	uniqueTestSession := uuid.New().String()[:8]
+
+	// Create logs for multiple projects with different timestamps
+	project1 := uuid.New()
+	project2 := uuid.New()
+	project3 := uuid.New()
+
+	baseTime := time.Now().UTC()
+	oldestTime := baseTime.Add(-3 * time.Hour)
+	middleTime := baseTime.Add(-1 * time.Hour)
+	newestTime := baseTime.Add(-30 * time.Minute)
+
+	// Get system stats before adding our test logs
+	statsBefore, err := repository.GetSystemLogStats()
+	assert.NoError(t, err)
+	assert.NotNil(t, statsBefore)
+
+	// Create logs across different projects with different timestamps
+	project1OldLogEntries := CreateTestLogEntriesWithUniqueFields(project1, oldestTime,
+		"Project 1 oldest log", map[string]any{
+			"test_session": uniqueTestSession,
+			"project":      "project1",
+		})
+
+	project2MiddleLogEntries := CreateTestLogEntriesWithUniqueFields(project2, middleTime,
+		"Project 2 middle log", map[string]any{
+			"test_session": uniqueTestSession,
+			"project":      "project2",
+		})
+
+	project3NewestLogEntries := CreateTestLogEntriesWithUniqueFields(project3, newestTime,
+		"Project 3 newest log", map[string]any{
+			"test_session": uniqueTestSession,
+			"project":      "project3",
+		})
+
+	// Store all logs
+	allEntries := MergeLogEntries(project1OldLogEntries, project2MiddleLogEntries)
+	allEntries = MergeLogEntries(allEntries, project3NewestLogEntries)
+	StoreTestLogsAndFlush(t, repository, allEntries)
+
+	// Get system-wide stats after adding our logs
+	statsAfter, err := repository.GetSystemLogStats()
+	assert.NoError(t, err)
+	assert.NotNil(t, statsAfter)
+
+	// Verify total logs increased by at least 3
+	assert.GreaterOrEqual(t, statsAfter.TotalLogs, statsBefore.TotalLogs+3,
+		"Should have at least 3 more logs after adding test data")
+
+	// Verify timestamps are within reasonable bounds
+	assert.False(t, statsAfter.OldestLogTime.IsZero(), "Oldest log time should not be zero")
+	assert.False(t, statsAfter.NewestLogTime.IsZero(), "Newest log time should not be zero")
+	assert.True(t, statsAfter.NewestLogTime.After(statsAfter.OldestLogTime) ||
+		statsAfter.NewestLogTime.Equal(statsAfter.OldestLogTime),
+		"Newest log should be after or equal to oldest log")
+
+	// Verify TotalSizeMB is calculated and non-negative
+	assert.GreaterOrEqual(t, statsAfter.TotalSizeMB, float64(0), "TotalSizeMB should be non-negative")
+}

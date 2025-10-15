@@ -1,4 +1,4 @@
-export interface ProjectLogStats {
+export interface LogsStats {
   totalLogs: number;
   totalSizeMb: number;
   oldestLogTime: string;

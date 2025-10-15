@@ -267,7 +267,7 @@ func (s *LogCleanupBackgroundService) enforceLogRetention(projectID uuid.UUID, m
 
 func (s *LogCleanupBackgroundService) calculateCutoffTimeForLogCount(
 	logsToDelete int64,
-	stats *logs_core.ProjectLogStats,
+	stats *logs_core.LogsStatsDTO,
 ) time.Time {
 	if stats.TotalLogs == 0 {
 		return time.Now().UTC()
@@ -286,7 +286,7 @@ func (s *LogCleanupBackgroundService) calculateCutoffTimeForLogCount(
 
 func (s *LogCleanupBackgroundService) calculateCutoffTimeForSize(
 	sizeMBToDelete float64,
-	stats *logs_core.ProjectLogStats,
+	stats *logs_core.LogsStatsDTO,
 ) time.Time {
 	if stats.TotalSizeMB == 0 {
 		return time.Now().UTC()

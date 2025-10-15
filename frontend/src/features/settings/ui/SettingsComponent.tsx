@@ -1,8 +1,11 @@
 import { LoadingOutlined } from '@ant-design/icons';
 import { App, Button, Spin, Switch } from 'antd';
+import dayjs from 'dayjs';
 import { useEffect, useRef, useState } from 'react';
 
 import { getApplicationServer } from '../../../constants';
+import { queryApi } from '../../../entity/query/api/queryApi';
+import type { LogsStats } from '../../../entity/query/model/ProjectLogStats';
 import { settingsApi } from '../../../entity/users/api/settingsApi';
 import type { UsersSettings } from '../../../entity/users/model/UsersSettings';
 import { AuditLogsComponent } from './AuditLogsComponent';
@@ -18,6 +21,10 @@ export function SettingsComponent({ contentHeight }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
+  // System stats state
+  const [systemStats, setSystemStats] = useState<LogsStats | undefined>(undefined);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
+
   // Scroll container ref for audit logs lazy loading
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -30,6 +37,7 @@ export function SettingsComponent({ contentHeight }: Props) {
 
   useEffect(() => {
     loadSettings();
+    loadSystemStats();
   }, []);
 
   const loadSettings = async () => {
@@ -45,6 +53,21 @@ export function SettingsComponent({ contentHeight }: Props) {
       message.error(errorMessage);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadSystemStats = async () => {
+    setIsLoadingStats(true);
+
+    try {
+      const stats = await queryApi.getSystemStats();
+      setSystemStats(stats);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to load system statistics';
+      message.error(errorMessage);
+    } finally {
+      setIsLoadingStats(false);
     }
   };
 
@@ -255,6 +278,37 @@ export function SettingsComponent({ contentHeight }: Props) {
                 Use this endpoint to monitor your LogBull system&apos;s availability
               </div>
             </div>
+          </div>
+
+          {/* System statistics */}
+          <div className="my-8 max-w-[300px]">
+            <h2 className="mb-4 text-xl font-bold text-gray-900">System statistics</h2>
+            {isLoadingStats ? (
+              <div className="flex items-center py-2">
+                <Spin indicator={<LoadingOutlined spin />} />
+                <span className="ml-2 text-sm text-gray-500">Loading statistics...</span>
+              </div>
+            ) : systemStats ? (
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total logs:</span>
+                  <span className="font-medium">{systemStats.totalLogs.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Storage size:</span>
+                  <span className="font-medium">{systemStats.totalSizeMb.toFixed(2)} MB</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Date range:</span>
+                  <span className="font-medium">
+                    {dayjs(systemStats.oldestLogTime).format('D MMM YYYY')} -{' '}
+                    {dayjs(systemStats.newestLogTime).format('D MMM YYYY')}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-gray-500">No statistics available</div>
+            )}
           </div>
 
           <AuditLogsComponent scrollContainerRef={scrollContainerRef} />

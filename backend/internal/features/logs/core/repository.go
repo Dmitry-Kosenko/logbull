@@ -403,7 +403,7 @@ func (r *LogCoreRepository) DeleteOldLogs(projectID uuid.UUID, olderThan time.Ti
 	return r.deleteByQuery(deleteQuery, &projectID)
 }
 
-func (r *LogCoreRepository) GetProjectLogStats(projectID uuid.UUID) (*ProjectLogStats, error) {
+func (r *LogCoreRepository) GetProjectLogStats(projectID uuid.UUID) (*LogsStatsDTO, error) {
 	statsQuery := map[string]any{
 		"size": 0, // Don't return hits, only aggregations
 		"query": map[string]any{
@@ -487,7 +487,7 @@ func (r *LogCoreRepository) GetProjectLogStats(projectID uuid.UUID) (*ProjectLog
 		return nil, fmt.Errorf("failed to parse stats response: %w", err)
 	}
 
-	stats := &ProjectLogStats{
+	stats := &LogsStatsDTO{
 		TotalLogs:   statsSearchResponse.Aggregations.TotalLogs.Value,
 		TotalSizeMB: statsSearchResponse.Aggregations.TotalSizeBytes.Value / (1024 * 1024), // Convert bytes to MB
 	}
@@ -506,6 +506,108 @@ func (r *LogCoreRepository) GetProjectLogStats(projectID uuid.UUID) (*ProjectLog
 	} else {
 		r.logger.Warn("No newest log timestamp available",
 			"projectId", projectID.String())
+	}
+
+	return stats, nil
+}
+
+func (r *LogCoreRepository) GetSystemLogStats() (*LogsStatsDTO, error) {
+	statsQuery := map[string]any{
+		"size": 0, // Don't return hits, only aggregations
+		"query": map[string]any{
+			"match_all": map[string]any{},
+		},
+		"aggs": map[string]any{
+			"total_logs": map[string]any{
+				"value_count": map[string]any{"field": "_id"},
+			},
+			"oldest_log": map[string]any{
+				"min": map[string]any{"field": "timestamp"},
+			},
+			"newest_log": map[string]any{
+				"max": map[string]any{"field": "timestamp"},
+			},
+			"total_size_bytes": map[string]any{
+				"sum": map[string]any{
+					"script": map[string]any{
+						"source": `
+							int size = 200; // Base overhead for system fields
+							if (params._source.message != null) {
+								size += params._source.message.length();
+							}
+							if (params._source.attrs_text != null) {
+								size += params._source.attrs_text.length();
+							}
+							if (params._source.attrs_tokens != null) {
+								for (token in params._source.attrs_tokens) {
+									size += token.length();
+								}
+							}
+							return size;
+						`,
+					},
+				},
+			},
+		},
+	}
+
+	statsPayload, err := json.Marshal(statsQuery)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal stats query: %w", err)
+	}
+
+	statsEndpoint := r.baseURL + "/" + r.indexPattern + "/_search"
+	statsRequest, err := http.NewRequest("POST", statsEndpoint, bytes.NewReader(statsPayload))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stats request: %w", err)
+	}
+	statsRequest.Header.Set("Content-Type", "application/json")
+
+	statsResponse, err := r.client.Do(statsRequest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute stats search: %w", err)
+	}
+	defer func() {
+		if closeErr := statsResponse.Body.Close(); closeErr != nil {
+			r.logger.Error("failed to close stats response body", "error", closeErr)
+		}
+	}()
+
+	responseBody, err := io.ReadAll(statsResponse.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read stats response body: %w", err)
+	}
+
+	if statsResponse.StatusCode != 200 {
+		return nil, fmt.Errorf(
+			"OpenSearch stats search returned status %d: %s",
+			statsResponse.StatusCode,
+			string(responseBody),
+		)
+	}
+
+	var statsSearchResponse openSearchStatsResponse
+	if err := json.Unmarshal(responseBody, &statsSearchResponse); err != nil {
+		return nil, fmt.Errorf("failed to parse stats response: %w", err)
+	}
+
+	stats := &LogsStatsDTO{
+		TotalLogs:   statsSearchResponse.Aggregations.TotalLogs.Value,
+		TotalSizeMB: statsSearchResponse.Aggregations.TotalSizeBytes.Value / (1024 * 1024), // Convert bytes to MB
+	}
+
+	// Parse oldest timestamp from nanoseconds only
+	if statsSearchResponse.Aggregations.OldestLog.Value != 0 {
+		stats.OldestLogTime = time.Unix(0, int64(statsSearchResponse.Aggregations.OldestLog.Value)).UTC()
+	} else {
+		r.logger.Warn("No oldest log timestamp available for system stats")
+	}
+
+	// Parse newest timestamp from nanoseconds only
+	if statsSearchResponse.Aggregations.NewestLog.Value != 0 {
+		stats.NewestLogTime = time.Unix(0, int64(statsSearchResponse.Aggregations.NewestLog.Value)).UTC()
+	} else {
+		r.logger.Warn("No newest log timestamp available for system stats")
 	}
 
 	return stats, nil
