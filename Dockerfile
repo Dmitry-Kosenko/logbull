@@ -206,6 +206,16 @@ set -e
 # PostgreSQL 17 binary paths
 PG_BIN="/usr/lib/postgresql/17/bin"
 
+# Generate runtime configuration for frontend
+echo "Generating runtime configuration..."
+cat > /app/ui/build/runtime-config.js << JSEOF
+// Runtime configuration injected at container startup
+// This file is generated dynamically and should not be edited manually
+window.__RUNTIME_CONFIG__ = {
+  IS_CLOUD: '\${IS_CLOUD:-false}'
+};
+JSEOF
+
 # Ensure proper ownership of data directories
 echo "Setting up data directory permissions..."
 mkdir -p /logbull-data/pgdata /logbull-data/opensearch-data /logbull-data/opensearch-logs /logbull-data/valkey-data

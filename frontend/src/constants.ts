@@ -1,3 +1,13 @@
+interface RuntimeConfig {
+  IS_CLOUD?: string;
+}
+
+declare global {
+  interface Window {
+    __RUNTIME_CONFIG__?: RuntimeConfig;
+  }
+}
+
 export function getApplicationServer() {
   const origin = window.location.origin;
   const url = new URL(origin);
@@ -12,4 +22,7 @@ export function getApplicationServer() {
 }
 
 export const APP_VERSION = (import.meta.env.VITE_APP_VERSION as string) || 'dev';
-export const IS_CLOUD = import.meta.env.VITE_IS_CLOUD === 'true';
+
+// First try runtime config, then build-time env var, then default to false
+export const IS_CLOUD =
+  window.__RUNTIME_CONFIG__?.IS_CLOUD === 'true' || import.meta.env.VITE_IS_CLOUD === 'true';
