@@ -1,3 +1,4 @@
+import type { UserPlan } from './UserPlan';
 import type { UserRole } from './UserRole';
 
 export interface UserProfile {
@@ -7,4 +8,5 @@ export interface UserProfile {
   role: UserRole;
   isActive: boolean;
   createdAt: string;
+  plan?: UserPlan;
 }

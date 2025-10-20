@@ -261,6 +261,23 @@ func (s *MembershipService) TransferOwnership(
 		return errors.New("no current project owner found")
 	}
 
+	currentProject, err := s.projectRepository.GetProjectByID(projectID)
+	if err != nil {
+		return fmt.Errorf("failed to get project: %w", err)
+	}
+
+	if currentProject.Plan != nil && currentProject.Plan.Type != users_enums.UserPlanTypeDefault {
+		if newOwner.Plan == nil || newOwner.Plan.Type == users_enums.UserPlanTypeDefault {
+			return errors.New(
+				"cannot transfer ownership of project with extended plan to user with default or no plan",
+			)
+		}
+
+		if !s.projectService.CanCreateOneMoreProjectForUserPlan(newOwner) {
+			return errors.New("cannot transfer ownership, because new owner reached the limit of projects for his plan")
+		}
+	}
+
 	if err := s.membershipRepository.UpdateMemberRole(newOwner.ID, projectID, users_enums.ProjectRoleOwner); err != nil {
 		return fmt.Errorf("failed to update new owner role: %w", err)
 	}

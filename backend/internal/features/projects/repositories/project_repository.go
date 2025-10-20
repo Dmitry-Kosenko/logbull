@@ -25,7 +25,7 @@ func (r *ProjectRepository) CreateProject(project *projects_models.Project) erro
 func (r *ProjectRepository) GetProjectByID(projectID uuid.UUID) (*projects_models.Project, error) {
 	var project projects_models.Project
 
-	if err := storage.GetDb().Where("id = ?", projectID).First(&project).Error; err != nil {
+	if err := storage.GetDb().Preload("Plan").Where("id = ?", projectID).First(&project).Error; err != nil {
 		return nil, err
 	}
 
@@ -43,7 +43,20 @@ func (r *ProjectRepository) DeleteProject(projectID uuid.UUID) error {
 func (r *ProjectRepository) GetAllProjects() ([]*projects_models.Project, error) {
 	var projects []*projects_models.Project
 
-	err := storage.GetDb().Order("created_at DESC").Find(&projects).Error
+	err := storage.GetDb().Preload("Plan").Order("created_at DESC").Find(&projects).Error
 
 	return projects, err
+}
+
+func (r *ProjectRepository) GetProjectsCountByOwnerIDAndPlanID(ownerID uuid.UUID, planID uuid.UUID) (int64, error) {
+	var count int64
+
+	err := storage.GetDb().
+		Table("projects").
+		Joins("INNER JOIN project_memberships ON projects.id = project_memberships.project_id").
+		Where("project_memberships.user_id = ? AND project_memberships.role = 'OWNER' AND projects.plan_id = ?", ownerID, planID).
+		Count(&count).
+		Error
+
+	return count, err
 }

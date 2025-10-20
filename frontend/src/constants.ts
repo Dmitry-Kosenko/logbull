@@ -12,3 +12,4 @@ export function getApplicationServer() {
 }
 
 export const APP_VERSION = (import.meta.env.VITE_APP_VERSION as string) || 'dev';
+export const IS_CLOUD = import.meta.env.VITE_IS_CLOUD === 'true';

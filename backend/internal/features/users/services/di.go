@@ -7,17 +7,28 @@ import (
 var secretKeyRepository = &user_repositories.SecretKeyRepository{}
 var userRepository = &user_repositories.UserRepository{}
 var usersSettingsRepository = &user_repositories.UsersSettingsRepository{}
+var userPlanRepository = &user_repositories.UserPlanRepository{}
 
 var userService = &UserService{
-	userRepository:      userRepository,
-	secretKeyRepository: secretKeyRepository,
-	settingsService:     settingsService,
+	userRepository,
+	secretKeyRepository,
+	userPlanRepository,
+	settingsService,
+	nil,
 }
 var settingsService = &SettingsService{
-	userSettingsRepository: usersSettingsRepository,
+	usersSettingsRepository,
+	nil,
 }
 var managementService = &UserManagementService{
-	userRepository: userRepository,
+	userRepository,
+	userPlanService,
+	nil,
+}
+var userPlanService = &UserPlanService{
+	userPlanRepository,
+	nil,
+	userService,
 }
 
 func GetUserService() *UserService {
@@ -30,4 +41,8 @@ func GetSettingsService() *SettingsService {
 
 func GetManagementService() *UserManagementService {
 	return managementService
+}
+
+func GetUserPlanService() *UserPlanService {
+	return userPlanService
 }

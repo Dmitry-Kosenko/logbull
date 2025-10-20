@@ -152,6 +152,7 @@ func setUpRoutes(r *gin.Engine) {
 	userController.RegisterProtectedRoutes(protected)
 	users_controllers.GetSettingsController().RegisterRoutes(protected)
 	users_controllers.GetManagementController().RegisterRoutes(protected)
+	users_controllers.GetUserPlanController().RegisterRoutes(protected)
 	projects_controllers.GetProjectController().RegisterRoutes(protected)
 	projects_controllers.GetMembershipController().RegisterRoutes(protected)
 	api_keys.GetApiKeyController().RegisterRoutes(protected)

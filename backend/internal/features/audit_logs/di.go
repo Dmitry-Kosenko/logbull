@@ -26,4 +26,5 @@ func SetupDependencies() {
 	users_services.GetUserService().SetAuditLogWriter(auditLogService)
 	users_services.GetSettingsService().SetAuditLogWriter(auditLogService)
 	users_services.GetManagementService().SetAuditLogWriter(auditLogService)
+	users_services.GetUserPlanService().SetAuditLogWriter(auditLogService)
 }

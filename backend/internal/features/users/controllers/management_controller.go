@@ -19,6 +19,7 @@ type ManagementController struct {
 func (c *ManagementController) RegisterRoutes(router *gin.RouterGroup) {
 	router.GET("/users", user_middleware.RequireRole(user_enums.UserRoleAdmin), c.GetUsers)
 	router.GET("/users/:id", c.GetUserProfile)
+	router.GET("/users/count-by-plan/:planId", user_middleware.RequireRole(user_enums.UserRoleAdmin), c.CountByPlan)
 	router.POST("/users/:id/deactivate", user_middleware.RequireRole(user_enums.UserRoleAdmin), c.DeactivateUser)
 	router.POST("/users/:id/activate", user_middleware.RequireRole(user_enums.UserRoleAdmin), c.ActivateUser)
 	router.PUT("/users/:id/role", user_middleware.RequireRole(user_enums.UserRoleAdmin), c.ChangeUserRole)
@@ -242,4 +243,43 @@ func (c *ManagementController) ChangeUserRole(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "User role changed successfully"})
+}
+
+// CountByPlan
+// @Summary Get user count by plan
+// @Description Get count of users for a specific plan (admin only)
+// @Tags user-management
+// @Produce json
+// @Security BearerAuth
+// @Param planId path string true "Plan ID"
+// @Success 200 {object} users_dto.CountByPlanResponseDTO
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Router /users/count-by-plan/{planId} [get]
+func (c *ManagementController) CountByPlan(ctx *gin.Context) {
+	user, ok := user_middleware.GetUserFromContext(ctx)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	planIDStr := ctx.Param("planId")
+	planID, err := uuid.Parse(planIDStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan ID"})
+		return
+	}
+
+	count, err := c.managementService.CountByPlan(planID, user)
+	if err != nil {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	}
+
+	response := user_dto.CountByPlanResponseDTO{
+		Count: count,
+	}
+
+	ctx.JSON(http.StatusOK, response)
 }

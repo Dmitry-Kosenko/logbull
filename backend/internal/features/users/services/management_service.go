@@ -14,8 +14,9 @@ import (
 )
 
 type UserManagementService struct {
-	userRepository *user_repositories.UserRepository
-	auditLogWriter user_interfaces.AuditLogWriter
+	userRepository  *user_repositories.UserRepository
+	userPlanService *UserPlanService
+	auditLogWriter  user_interfaces.AuditLogWriter
 }
 
 func (s *UserManagementService) SetAuditLogWriter(writer user_interfaces.AuditLogWriter) {
@@ -154,4 +155,17 @@ func (s *UserManagementService) ChangeUserRole(
 	}
 
 	return nil
+}
+
+func (s *UserManagementService) CountByPlan(planID uuid.UUID, requester *user_models.User) (int64, error) {
+	if !requester.CanManageUsers() {
+		return 0, errors.New("insufficient permissions to view user counts")
+	}
+
+	count, err := s.userRepository.CountUsersByPlan(planID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count users for plan: %w", err)
+	}
+
+	return count, nil
 }

@@ -642,25 +642,33 @@ export function ProjectSettingsComponent({ projectResponse, user, contentHeight 
                     Rate limiting & quotas
                   </h2>
 
-                  <div className="mt-3 mb-4 text-sm text-gray-500">
+                  <div className="mt-3 text-sm text-gray-500">
                     Read more about settings you can{' '}
                     <a
                       href="https://logbull.com/settings"
                       target="_blank"
                       rel="noreferrer"
-                      className="!text-emerald-600"
+                      className="font-bold !text-emerald-600"
                     >
                       here
                     </a>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {project?.plan?.warningText && (
+                    <div className="mt-1 text-orange-600 opacity-60">
+                      {project.plan.warningText}
+                    </div>
+                  )}
+
+                  <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                       <div className="mb-1 font-medium text-gray-900">Logs per second limit</div>
                       <InputNumber
                         value={formProject.logsPerSecondLimit}
                         onChange={(value) => handleFieldChange('logsPerSecondLimit', value || 0)}
-                        disabled={!canEdit}
+                        disabled={
+                          !canEdit || (project.plan && project.plan.logsPerSecondLimit != 0)
+                        }
                         formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                         parser={(value) => value?.replace(/\$\s?|(,*)/g, '') as unknown as number}
                         min={0}
@@ -677,7 +685,7 @@ export function ProjectSettingsComponent({ projectResponse, user, contentHeight 
                       <InputNumber
                         value={formProject.maxLogSizeKb}
                         onChange={(value) => handleFieldChange('maxLogSizeKb', value || 0)}
-                        disabled={!canEdit}
+                        disabled={!canEdit || (project.plan && project.plan.maxLogSizeKb != 0)}
                         formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                         parser={(value) => value?.replace(/\$\s?|(,*)/g, '') as unknown as number}
                         min={1}
@@ -694,7 +702,7 @@ export function ProjectSettingsComponent({ projectResponse, user, contentHeight 
                       <InputNumber
                         value={formProject.maxLogsAmount}
                         onChange={(value) => handleFieldChange('maxLogsAmount', value || 0)}
-                        disabled={!canEdit}
+                        disabled={!canEdit || (project.plan && project.plan.maxLogsAmount != 0)}
                         min={0}
                         max={1000000000000000}
                         formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
@@ -715,7 +723,7 @@ export function ProjectSettingsComponent({ projectResponse, user, contentHeight 
                         onChange={(value) => handleFieldChange('maxLogsSizeMb', value || 0)}
                         formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                         parser={(value) => value?.replace(/\$\s?|(,*)/g, '') as unknown as number}
-                        disabled={!canEdit}
+                        disabled={!canEdit || (project.plan && project.plan.maxLogsSizeMb != 0)}
                         min={0}
                         max={1000000000000000}
                         style={{ width: '150px' }}
@@ -732,7 +740,7 @@ export function ProjectSettingsComponent({ projectResponse, user, contentHeight 
                         onChange={(value) => handleFieldChange('maxLogsLifeDays', value || 0)}
                         formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                         parser={(value) => value?.replace(/\$\s?|(,*)/g, '') as unknown as number}
-                        disabled={!canEdit}
+                        disabled={!canEdit || (project.plan && project.plan.maxLogsLifeDays != 0)}
                         min={1}
                         max={3650}
                         style={{ width: '150px' }}

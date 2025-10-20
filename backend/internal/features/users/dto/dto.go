@@ -80,3 +80,35 @@ type ListUsersRequestDTO struct {
 	BeforeDate *time.Time `form:"beforeDate" json:"beforeDate"`
 	Query      string     `form:"query"      json:"query"`
 }
+
+type CreatePlanRequestDTO struct {
+	Name                 string                   `json:"name"                 binding:"required"`
+	Type                 users_enums.UserPlanType `json:"type"                 binding:"required"`
+	IsPublic             bool                     `json:"isPublic"`
+	WarningText          string                   `json:"warningText"`
+	UpgradeText          string                   `json:"upgradeText"`
+	LogsPerSecondLimit   int                      `json:"logsPerSecondLimit"   binding:"gte=0"`
+	MaxLogsAmount        int64                    `json:"maxLogsAmount"        binding:"gte=0"`
+	MaxLogsSizeMB        int                      `json:"maxLogsSizeMb"        binding:"gte=0"`
+	MaxLogsLifeDays      int                      `json:"maxLogsLifeDays"      binding:"gte=0"`
+	MaxLogSizeKB         int                      `json:"maxLogSizeKb"         binding:"gte=0"`
+	AllowedProjectsCount int                      `json:"allowedProjectsCount" binding:"gte=0"`
+}
+
+type UpdatePlanRequestDTO struct {
+	Name                 *string                   `json:"name"`
+	Type                 *users_enums.UserPlanType `json:"type"`
+	IsPublic             *bool                     `json:"isPublic"`
+	WarningText          *string                   `json:"warningText"`
+	UpgradeText          *string                   `json:"upgradeText"`
+	LogsPerSecondLimit   *int                      `json:"logsPerSecondLimit"`
+	MaxLogsAmount        *int64                    `json:"maxLogsAmount"`
+	MaxLogsSizeMB        *int                      `json:"maxLogsSizeMb"`
+	MaxLogsLifeDays      *int                      `json:"maxLogsLifeDays"`
+	MaxLogSizeKB         *int                      `json:"maxLogSizeKb"`
+	AllowedProjectsCount *int                      `json:"allowedProjectsCount"`
+}
+
+type CountByPlanResponseDTO struct {
+	Count int64 `json:"count"`
+}

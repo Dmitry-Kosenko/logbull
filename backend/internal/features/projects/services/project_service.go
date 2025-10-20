@@ -25,6 +25,7 @@ type ProjectService struct {
 	userService              *users_services.UserService
 	auditLogService          *audit_logs.AuditLogService
 	settingsService          *users_services.SettingsService
+	userPlanService          *users_services.UserPlanService
 	projectDeletionListeners []projects_interfaces.ProjectDeletionListener
 
 	projectCacheUtil *cache_utils.CacheUtil[projects_models.Project]
@@ -63,6 +64,22 @@ func (s *ProjectService) CreateProject(
 		MaxLogsLifeDays:    180,
 		MaxLogSizeKB:       64,
 		CreatedAt:          time.Now().UTC(),
+	}
+
+	var plan *users_models.UserPlan
+
+	if s.CanCreateOneMoreProjectForUserPlan(creator) {
+		plan = creator.Plan
+	} else {
+		plan, err = s.userPlanService.GetDefaultPlan()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get default plan: %w", err)
+		}
+	}
+
+	if plan != nil {
+		project.PlanID = &plan.ID
+		project.SetLimitsFromPlan(plan)
 	}
 
 	if err := s.projectRepository.CreateProject(project); err != nil {
@@ -124,7 +141,7 @@ func (s *ProjectService) GetUserProjects(user *users_models.User) (*projects_dto
 
 func (s *ProjectService) UpdateProject(
 	projectID uuid.UUID,
-	project *projects_models.Project,
+	updateDTO *projects_models.Project,
 	user *users_models.User,
 ) (*projects_models.Project, error) {
 	canManage, err := s.CanUserManageProject(projectID, user)
@@ -141,22 +158,24 @@ func (s *ProjectService) UpdateProject(
 		return nil, fmt.Errorf("failed to get project: %w", err)
 	}
 
-	project.ID = projectID
-	project.CreatedAt = existingProject.CreatedAt
+	updateDTO.ID = projectID
+	updateDTO.CreatedAt = existingProject.CreatedAt
 
-	if err := s.projectRepository.UpdateProject(project); err != nil {
+	existingProject.UpdateFromDTO(updateDTO)
+
+	if err := s.projectRepository.UpdateProject(existingProject); err != nil {
 		return nil, fmt.Errorf("failed to update project: %w", err)
 	}
 
 	s.projectCacheUtil.Invalidate(projectID.String())
 
 	s.auditLogService.WriteAuditLog(
-		fmt.Sprintf("Project updated: %s", project.Name),
+		fmt.Sprintf("Project updated: %s", updateDTO.Name),
 		&user.ID,
 		&projectID,
 	)
 
-	return project, nil
+	return existingProject, nil
 }
 
 func (s *ProjectService) DeleteProject(projectID uuid.UUID, user *users_models.User) error {
@@ -291,4 +310,26 @@ func (s *ProjectService) GetProjectWithCache(projectID uuid.UUID) (*projects_mod
 
 func (s *ProjectService) GetAllProjects() ([]*projects_models.Project, error) {
 	return s.projectRepository.GetAllProjects()
+}
+
+func (s *ProjectService) CanCreateOneMoreProjectForUserPlan(user *users_models.User) bool {
+	if user.Plan == nil {
+		return false
+	}
+
+	if user.Plan.Type == users_enums.UserPlanTypeDefault {
+		return true
+	}
+
+	if user.Plan.AllowedProjectsCount == 0 {
+		// means unlimited
+		return true
+	}
+
+	projectsCountWithSamePlan, err := s.projectRepository.GetProjectsCountByOwnerIDAndPlanID(user.ID, user.Plan.ID)
+	if err != nil {
+		return false
+	}
+
+	return projectsCountWithSamePlan < int64(user.Plan.AllowedProjectsCount)
 }

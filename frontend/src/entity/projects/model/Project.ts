@@ -1,7 +1,10 @@
+import type { UserPlan } from '../../users/model/UserPlan';
+
 export interface Project {
   id: string;
   name: string;
   createdAt: Date;
+  plan?: UserPlan;
 
   // Security Policies
   isApiKeyRequired: boolean;

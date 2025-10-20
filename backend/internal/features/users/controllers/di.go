@@ -7,16 +7,20 @@ import (
 )
 
 var userController = &UserController{
-	userService:   users_services.GetUserService(),
-	signinLimiter: rate.NewLimiter(rate.Limit(3), 3), // 3 RPS with burst of 3
+	users_services.GetUserService(),
+	rate.NewLimiter(rate.Limit(3), 3), // 3 rps with 3 burst
 }
 
 var settingsController = &SettingsController{
-	settingsService: users_services.GetSettingsService(),
+	users_services.GetSettingsService(),
 }
 
 var managementController = &ManagementController{
-	managementService: users_services.GetManagementService(),
+	users_services.GetManagementService(),
+}
+
+var userPlanController = &UserPlanController{
+	users_services.GetUserPlanService(),
 }
 
 func GetUserController() *UserController {
@@ -29,4 +33,8 @@ func GetSettingsController() *SettingsController {
 
 func GetManagementController() *ManagementController {
 	return managementController
+}
+
+func GetUserPlanController() *UserPlanController {
+	return userPlanController
 }

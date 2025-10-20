@@ -11,9 +11,11 @@ type User struct {
 	ID                   uuid.UUID              `json:"id"`
 	Email                string                 `json:"email"`
 	Name                 string                 `json:"name"`
-	HashedPassword       *string                `json:"-"         gorm:"column:hashed_password"`
-	PasswordCreationTime time.Time              `json:"-"         gorm:"column:password_creation_time"`
+	HashedPassword       *string                `json:"-"                gorm:"column:hashed_password"`
+	PasswordCreationTime time.Time              `json:"-"                gorm:"column:password_creation_time"`
 	Role                 users_enums.UserRole   `json:"role"`
+	PlanID               *uuid.UUID             `json:"planId,omitempty" gorm:"column:plan_id"`
+	Plan                 *UserPlan              `json:"plan"`
 	Status               users_enums.UserStatus `json:"status"`
 	CreatedAt            time.Time              `json:"createdAt"`
 }

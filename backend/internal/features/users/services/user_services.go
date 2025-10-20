@@ -19,9 +19,9 @@ import (
 type UserService struct {
 	userRepository      *users_repositories.UserRepository
 	secretKeyRepository *users_repositories.SecretKeyRepository
+	userPlanRepository  *users_repositories.UserPlanRepository
 	settingsService     *SettingsService
-	// audit log is never nil, DI always set it
-	auditLogWriter users_interfaces.AuditLogWriter
+	auditLogWriter      users_interfaces.AuditLogWriter
 }
 
 func (s *UserService) SetAuditLogWriter(writer users_interfaces.AuditLogWriter) {
@@ -80,7 +80,16 @@ func (s *UserService) SignUp(request *users_dto.SignUpRequestDTO) error {
 		return errors.New("external registration is disabled")
 	}
 
-	// Create new user
+	basicPlan, err := s.userPlanRepository.GetPlanByType(users_enums.UserPlanTypeDefault)
+	if err != nil {
+		return fmt.Errorf("failed to get default plan: %w", err)
+	}
+
+	var planID *uuid.UUID
+	if basicPlan != nil {
+		planID = &basicPlan.ID
+	}
+
 	user := &users_models.User{
 		ID:                   uuid.New(),
 		Email:                request.Email,
@@ -88,6 +97,7 @@ func (s *UserService) SignUp(request *users_dto.SignUpRequestDTO) error {
 		HashedPassword:       &hashedPasswordStr,
 		PasswordCreationTime: time.Now().UTC(),
 		Role:                 users_enums.UserRoleMember,
+		PlanID:               planID,
 		Status:               users_enums.UserStatusActive,
 		CreatedAt:            time.Now().UTC(),
 	}
@@ -339,13 +349,24 @@ func (s *UserService) InviteUser(
 		return nil, errors.New("user with this email already exists")
 	}
 
+	basicPlan, err := s.userPlanRepository.GetPlanByType(users_enums.UserPlanTypeDefault)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get default plan: %w", err)
+	}
+
+	var planID *uuid.UUID
+	if basicPlan != nil {
+		planID = &basicPlan.ID
+	}
+
 	user := &users_models.User{
 		ID:                   uuid.New(),
 		Email:                request.Email,
 		Name:                 "User",
-		HashedPassword:       nil, // No password yet
+		HashedPassword:       nil,
 		PasswordCreationTime: time.Now().UTC(),
 		Role:                 users_enums.UserRoleMember,
+		PlanID:               planID,
 		Status:               users_enums.UserStatusInvited,
 		CreatedAt:            time.Now().UTC(),
 	}
@@ -420,5 +441,18 @@ func (s *UserService) UpdateUserInfo(
 	}
 
 	s.auditLogWriter.WriteAuditLog("User info updated", &userID, nil)
+	return nil
+}
+
+func (s *UserService) OnBeforePlanDeletion(planID uuid.UUID) error {
+	usersWithPlanCount, err := s.userRepository.CountUsersByPlan(planID)
+	if err != nil {
+		return fmt.Errorf("failed to count users with plan: %w", err)
+	}
+
+	if usersWithPlanCount > 0 {
+		return errors.New("cannot delete plan with assigned users")
+	}
+
 	return nil
 }

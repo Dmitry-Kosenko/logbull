@@ -11,6 +11,7 @@ import (
 	projects_services "logbull/internal/features/projects/services"
 	projects_testing "logbull/internal/features/projects/testing"
 
+	users_controllers "logbull/internal/features/users/controllers"
 	users_dto "logbull/internal/features/users/dto"
 	users_enums "logbull/internal/features/users/enums"
 	users_models "logbull/internal/features/users/models"
@@ -719,6 +720,532 @@ func Test_GetProjectWithCache_MultipleNonExistentProjects_CachesEachSeparately(t
 	assert.Error(t, err4)
 }
 
+func Test_CreateProject_WhenUserHasPlan_ProjectReceiveUserPlan(t *testing.T) {
+	users_testing.CleanupPlans()
+	router := projects_testing.CreateTestRouter(
+		GetProjectController(),
+		GetMembershipController(),
+		users_controllers.GetUserPlanController(),
+	)
+	users_services.GetUserPlanService().SetAuditLogWriter(&AuditLogWriterStub{})
+
+	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
+	defer users_testing.ResetSettingsToDefaults()
+
+	planRequest := users_testing.CreateValidPlanRequest("Pro Plan", users_enums.UserPlanTypePro)
+	plan := users_testing.CreateTestPlanViaAPI(t, planRequest, admin.Token, router)
+
+	user := users_testing.CreateTestUser(users_enums.UserRoleMember)
+	users_testing.AssignPlanToUser(user.UserID.String(), plan.ID.String())
+
+	project, _ := projects_testing.CreateTestProjectWithToken("Test Project", user.Token, router)
+
+	var response projects_models.Project
+	test_utils.MakeGetRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/projects/"+project.ID.String(),
+		"Bearer "+user.Token,
+		http.StatusOK,
+		&response,
+	)
+
+	assert.NotNil(t, response.PlanID)
+	assert.Equal(t, plan.ID, *response.PlanID)
+	assert.Equal(t, plan.LogsPerSecondLimit, response.LogsPerSecondLimit)
+	assert.Equal(t, plan.MaxLogsAmount, response.MaxLogsAmount)
+	assert.Equal(t, plan.MaxLogsSizeMB, response.MaxLogsSizeMB)
+	assert.Equal(t, plan.MaxLogsLifeDays, response.MaxLogsLifeDays)
+	assert.Equal(t, plan.MaxLogSizeKB, response.MaxLogSizeKB)
+}
+
+func Test_CreateProject_WhenUserExceededAllowedPlanProjectsCount_ProjectReceiveDefaultPlan(t *testing.T) {
+	users_testing.CleanupPlans()
+	router := projects_testing.CreateTestRouter(
+		GetProjectController(),
+		GetMembershipController(),
+		users_controllers.GetUserPlanController(),
+	)
+	users_services.GetUserPlanService().SetAuditLogWriter(&AuditLogWriterStub{})
+
+	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
+	defer users_testing.ResetSettingsToDefaults()
+
+	defaultPlanRequest := users_testing.CreateValidPlanRequest("Default Plan", users_enums.UserPlanTypeDefault)
+	defaultPlanRequest.LogsPerSecondLimit = 50
+	defaultPlanRequest.MaxLogsAmount = 500000
+	defaultPlanRequest.MaxLogsSizeMB = 512
+	defaultPlanRequest.MaxLogsLifeDays = 15
+	defaultPlanRequest.MaxLogSizeKB = 128
+	defaultPlan := users_testing.CreateTestPlanViaAPI(t, defaultPlanRequest, admin.Token, router)
+
+	proPlanRequest := users_testing.CreateValidPlanRequest("Pro Plan Limited", users_enums.UserPlanTypePro)
+	proPlanRequest.AllowedProjectsCount = 2
+	proPlanRequest.LogsPerSecondLimit = 200
+	proPlanRequest.MaxLogsAmount = 2000000
+	proPlanRequest.MaxLogsSizeMB = 2048
+	proPlanRequest.MaxLogsLifeDays = 60
+	proPlanRequest.MaxLogSizeKB = 512
+	proPlan := users_testing.CreateTestPlanViaAPI(t, proPlanRequest, admin.Token, router)
+
+	user := users_testing.CreateTestUser(users_enums.UserRoleMember)
+	users_testing.AssignPlanToUser(user.UserID.String(), proPlan.ID.String())
+
+	project1, _ := projects_testing.CreateTestProjectWithToken("Project 1", user.Token, router)
+	project2, _ := projects_testing.CreateTestProjectWithToken("Project 2", user.Token, router)
+
+	var response1 projects_models.Project
+	test_utils.MakeGetRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/projects/"+project1.ID.String(),
+		"Bearer "+user.Token,
+		http.StatusOK,
+		&response1,
+	)
+
+	assert.NotNil(t, response1.PlanID)
+	assert.Equal(t, proPlan.ID, *response1.PlanID)
+	assert.Equal(t, proPlan.LogsPerSecondLimit, response1.LogsPerSecondLimit)
+
+	var response2 projects_models.Project
+	test_utils.MakeGetRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/projects/"+project2.ID.String(),
+		"Bearer "+user.Token,
+		http.StatusOK,
+		&response2,
+	)
+
+	assert.NotNil(t, response2.PlanID)
+	assert.Equal(t, proPlan.ID, *response2.PlanID)
+	assert.Equal(t, proPlan.LogsPerSecondLimit, response2.LogsPerSecondLimit)
+
+	project3, _ := projects_testing.CreateTestProjectWithToken("Project 3", user.Token, router)
+
+	var response3 projects_models.Project
+	test_utils.MakeGetRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/projects/"+project3.ID.String(),
+		"Bearer "+user.Token,
+		http.StatusOK,
+		&response3,
+	)
+
+	assert.NotNil(t, response3.PlanID)
+	assert.Equal(t, defaultPlan.ID, *response3.PlanID)
+	assert.Equal(t, defaultPlan.LogsPerSecondLimit, response3.LogsPerSecondLimit)
+	assert.Equal(t, defaultPlan.MaxLogsAmount, response3.MaxLogsAmount)
+	assert.Equal(t, defaultPlan.MaxLogsSizeMB, response3.MaxLogsSizeMB)
+	assert.Equal(t, defaultPlan.MaxLogsLifeDays, response3.MaxLogsLifeDays)
+	assert.Equal(t, defaultPlan.MaxLogSizeKB, response3.MaxLogSizeKB)
+}
+
+func Test_CreateProject_WhenThereAreNoPlans_ProjectCreatedWithoutPlan(t *testing.T) {
+	users_testing.CleanupPlans()
+	router := projects_testing.CreateTestRouter(GetProjectController(), GetMembershipController())
+	user := users_testing.CreateTestUser(users_enums.UserRoleMember)
+	defer users_testing.ResetSettingsToDefaults()
+
+	project, _ := projects_testing.CreateTestProjectWithToken("Test Project", user.Token, router)
+
+	var response projects_models.Project
+	test_utils.MakeGetRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/projects/"+project.ID.String(),
+		"Bearer "+user.Token,
+		http.StatusOK,
+		&response,
+	)
+
+	assert.Nil(t, response.PlanID)
+	assert.Equal(t, "Test Project", response.Name)
+	assert.NotEqual(t, uuid.Nil, response.ID)
+}
+
+func Test_TransferProjectWithDefaultPlan_FromUserWithDefaultPlanToUserWithDefaultPlan_ProjectTransferred(t *testing.T) {
+	users_testing.CleanupPlans()
+	router := projects_testing.CreateTestRouter(
+		GetProjectController(),
+		GetMembershipController(),
+		users_controllers.GetUserPlanController(),
+	)
+	users_services.GetUserPlanService().SetAuditLogWriter(&AuditLogWriterStub{})
+
+	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
+	defer users_testing.ResetSettingsToDefaults()
+
+	defaultPlanRequest := users_testing.CreateValidPlanRequest("Default Plan", users_enums.UserPlanTypeDefault)
+	defaultPlan := users_testing.CreateTestPlanViaAPI(t, defaultPlanRequest, admin.Token, router)
+
+	owner := users_testing.CreateTestUser(users_enums.UserRoleMember)
+	users_testing.AssignPlanToUser(owner.UserID.String(), defaultPlan.ID.String())
+
+	newOwner := users_testing.CreateTestUser(users_enums.UserRoleMember)
+	users_testing.AssignPlanToUser(newOwner.UserID.String(), defaultPlan.ID.String())
+
+	project, _ := projects_testing.CreateTestProjectWithToken("Test Project", owner.Token, router)
+	projects_testing.AddMemberToProject(project, newOwner, users_enums.ProjectRoleMember, owner.Token, router)
+
+	var projectBefore projects_models.Project
+	test_utils.MakeGetRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/projects/"+project.ID.String(),
+		"Bearer "+owner.Token,
+		http.StatusOK,
+		&projectBefore,
+	)
+
+	assert.NotNil(t, projectBefore.PlanID)
+	assert.Equal(t, defaultPlan.ID, *projectBefore.PlanID)
+
+	transferRequest := projects_dto.TransferOwnershipRequestDTO{
+		NewOwnerEmail: newOwner.Email,
+	}
+
+	resp := test_utils.MakePostRequest(
+		t,
+		router,
+		"/api/v1/projects/memberships/"+project.ID.String()+"/transfer-ownership",
+		"Bearer "+owner.Token,
+		transferRequest,
+		http.StatusOK,
+	)
+
+	assert.Contains(t, string(resp.Body), "Ownership transferred successfully")
+
+	var projectAfter projects_models.Project
+	test_utils.MakeGetRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/projects/"+project.ID.String(),
+		"Bearer "+newOwner.Token,
+		http.StatusOK,
+		&projectAfter,
+	)
+
+	assert.NotNil(t, projectAfter.PlanID)
+	assert.Equal(t, defaultPlan.ID, *projectAfter.PlanID)
+}
+
+func Test_TransferProjectWithExtendedPlan_FromUserWithExtendedPlanToUserWithDefaultPlan_TransferFailes(t *testing.T) {
+	users_testing.CleanupPlans()
+	router := projects_testing.CreateTestRouter(
+		GetProjectController(),
+		GetMembershipController(),
+		users_controllers.GetUserPlanController(),
+	)
+	users_services.GetUserPlanService().SetAuditLogWriter(&AuditLogWriterStub{})
+
+	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
+	defer users_testing.ResetSettingsToDefaults()
+
+	defaultPlanRequest := users_testing.CreateValidPlanRequest("Default Plan", users_enums.UserPlanTypeDefault)
+	defaultPlan := users_testing.CreateTestPlanViaAPI(t, defaultPlanRequest, admin.Token, router)
+
+	extendedPlanRequest := users_testing.CreateValidPlanRequest("Extended Plan", users_enums.UserPlanTypePro)
+	extendedPlan := users_testing.CreateTestPlanViaAPI(t, extendedPlanRequest, admin.Token, router)
+
+	owner := users_testing.CreateTestUser(users_enums.UserRoleMember)
+	users_testing.AssignPlanToUser(owner.UserID.String(), extendedPlan.ID.String())
+
+	newOwner := users_testing.CreateTestUser(users_enums.UserRoleMember)
+	users_testing.AssignPlanToUser(newOwner.UserID.String(), defaultPlan.ID.String())
+
+	project, _ := projects_testing.CreateTestProjectWithToken("Test Project", owner.Token, router)
+	projects_testing.AddMemberToProject(project, newOwner, users_enums.ProjectRoleMember, owner.Token, router)
+
+	var projectBefore projects_models.Project
+	test_utils.MakeGetRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/projects/"+project.ID.String(),
+		"Bearer "+owner.Token,
+		http.StatusOK,
+		&projectBefore,
+	)
+
+	assert.NotNil(t, projectBefore.PlanID)
+	assert.Equal(t, extendedPlan.ID, *projectBefore.PlanID)
+
+	transferRequest := projects_dto.TransferOwnershipRequestDTO{
+		NewOwnerEmail: newOwner.Email,
+	}
+
+	resp := test_utils.MakePostRequest(
+		t,
+		router,
+		"/api/v1/projects/memberships/"+project.ID.String()+"/transfer-ownership",
+		"Bearer "+owner.Token,
+		transferRequest,
+		http.StatusBadRequest,
+	)
+
+	assert.Contains(t, string(resp.Body), "cannot transfer")
+}
+
+func Test_TransferProjectWithExtendedPlan_FromUserWithExtendedPlanToUserWithExtendedPlan_ProjectTransferred(
+	t *testing.T,
+) {
+	users_testing.CleanupPlans()
+	router := projects_testing.CreateTestRouter(
+		GetProjectController(),
+		GetMembershipController(),
+		users_controllers.GetUserPlanController(),
+	)
+	users_services.GetUserPlanService().SetAuditLogWriter(&AuditLogWriterStub{})
+
+	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
+	defer users_testing.ResetSettingsToDefaults()
+
+	extendedPlanRequest := users_testing.CreateValidPlanRequest("Extended Plan", users_enums.UserPlanTypePro)
+	extendedPlan := users_testing.CreateTestPlanViaAPI(t, extendedPlanRequest, admin.Token, router)
+
+	owner := users_testing.CreateTestUser(users_enums.UserRoleMember)
+	users_testing.AssignPlanToUser(owner.UserID.String(), extendedPlan.ID.String())
+
+	newOwner := users_testing.CreateTestUser(users_enums.UserRoleMember)
+	users_testing.AssignPlanToUser(newOwner.UserID.String(), extendedPlan.ID.String())
+
+	project, _ := projects_testing.CreateTestProjectWithToken("Test Project", owner.Token, router)
+	projects_testing.AddMemberToProject(project, newOwner, users_enums.ProjectRoleMember, owner.Token, router)
+
+	var projectBefore projects_models.Project
+	test_utils.MakeGetRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/projects/"+project.ID.String(),
+		"Bearer "+owner.Token,
+		http.StatusOK,
+		&projectBefore,
+	)
+
+	assert.NotNil(t, projectBefore.PlanID)
+	assert.Equal(t, extendedPlan.ID, *projectBefore.PlanID)
+
+	transferRequest := projects_dto.TransferOwnershipRequestDTO{
+		NewOwnerEmail: newOwner.Email,
+	}
+
+	resp := test_utils.MakePostRequest(
+		t,
+		router,
+		"/api/v1/projects/memberships/"+project.ID.String()+"/transfer-ownership",
+		"Bearer "+owner.Token,
+		transferRequest,
+		http.StatusOK,
+	)
+
+	assert.Contains(t, string(resp.Body), "Ownership transferred successfully")
+
+	var projectAfter projects_models.Project
+	test_utils.MakeGetRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/projects/"+project.ID.String(),
+		"Bearer "+newOwner.Token,
+		http.StatusOK,
+		&projectAfter,
+	)
+
+	assert.NotNil(t, projectAfter.PlanID)
+	assert.Equal(t, extendedPlan.ID, *projectAfter.PlanID)
+}
+
+func Test_UpdateProjectLimits_WhenProjectHasPlanWithFixedLimits_LimitsNotUpdated(t *testing.T) {
+	users_testing.CleanupPlans()
+	router := projects_testing.CreateTestRouter(
+		GetProjectController(),
+		GetMembershipController(),
+		users_controllers.GetUserPlanController(),
+	)
+	users_services.GetUserPlanService().SetAuditLogWriter(&AuditLogWriterStub{})
+
+	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
+	defer users_testing.ResetSettingsToDefaults()
+
+	planRequest := users_testing.CreateValidPlanRequest("Fixed Limits Plan", users_enums.UserPlanTypePro)
+	planRequest.LogsPerSecondLimit = 100
+	planRequest.MaxLogsAmount = 1000000
+	planRequest.MaxLogsSizeMB = 1024
+	planRequest.MaxLogsLifeDays = 30
+	planRequest.MaxLogSizeKB = 256
+	plan := users_testing.CreateTestPlanViaAPI(t, planRequest, admin.Token, router)
+
+	owner := users_testing.CreateTestUser(users_enums.UserRoleMember)
+	users_testing.AssignPlanToUser(owner.UserID.String(), plan.ID.String())
+
+	project, _ := projects_testing.CreateTestProjectWithToken("Test Project", owner.Token, router)
+
+	var projectBefore projects_models.Project
+	test_utils.MakeGetRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/projects/"+project.ID.String(),
+		"Bearer "+owner.Token,
+		http.StatusOK,
+		&projectBefore,
+	)
+
+	assert.Equal(t, 100, projectBefore.LogsPerSecondLimit)
+	assert.Equal(t, int64(1000000), projectBefore.MaxLogsAmount)
+	assert.Equal(t, 1024, projectBefore.MaxLogsSizeMB)
+	assert.Equal(t, 30, projectBefore.MaxLogsLifeDays)
+	assert.Equal(t, 256, projectBefore.MaxLogSizeKB)
+
+	updateRequest := projects_models.Project{
+		Name:               projectBefore.Name,
+		IsApiKeyRequired:   false,
+		LogsPerSecondLimit: 5000,
+		MaxLogsAmount:      50_000_000,
+		MaxLogsSizeMB:      5000,
+		MaxLogsLifeDays:    365,
+		MaxLogSizeKB:       512,
+	}
+
+	var projectAfter projects_models.Project
+	test_utils.MakePutRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/projects/"+project.ID.String(),
+		"Bearer "+owner.Token,
+		updateRequest,
+		http.StatusOK,
+		&projectAfter,
+	)
+
+	assert.Equal(t, 100, projectAfter.LogsPerSecondLimit)
+	assert.Equal(t, int64(1000000), projectAfter.MaxLogsAmount)
+	assert.Equal(t, 1024, projectAfter.MaxLogsSizeMB)
+	assert.Equal(t, 30, projectAfter.MaxLogsLifeDays)
+	assert.Equal(t, 256, projectAfter.MaxLogSizeKB)
+}
+
+func Test_UpdateProjectLimits_WhenProjectWithoutPlan_LimitsUpdated(t *testing.T) {
+	users_testing.CleanupPlans()
+	router := projects_testing.CreateTestRouter(
+		GetProjectController(),
+		GetMembershipController(),
+		users_controllers.GetUserPlanController(),
+	)
+	defer users_testing.ResetSettingsToDefaults()
+
+	owner := users_testing.CreateTestUser(users_enums.UserRoleMember)
+	project, _ := projects_testing.CreateTestProjectWithToken("Test Project", owner.Token, router)
+
+	var projectBefore projects_models.Project
+	test_utils.MakeGetRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/projects/"+project.ID.String(),
+		"Bearer "+owner.Token,
+		http.StatusOK,
+		&projectBefore,
+	)
+
+	assert.Nil(t, projectBefore.PlanID)
+
+	updateRequest := projects_models.Project{
+		Name:               projectBefore.Name,
+		IsApiKeyRequired:   false,
+		LogsPerSecondLimit: 5000,
+		MaxLogsAmount:      50_000_000,
+		MaxLogsSizeMB:      5000,
+		MaxLogsLifeDays:    365,
+		MaxLogSizeKB:       512,
+	}
+
+	var projectAfter projects_models.Project
+	test_utils.MakePutRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/projects/"+project.ID.String(),
+		"Bearer "+owner.Token,
+		updateRequest,
+		http.StatusOK,
+		&projectAfter,
+	)
+
+	assert.Equal(t, 5000, projectAfter.LogsPerSecondLimit)
+	assert.Equal(t, int64(50_000_000), projectAfter.MaxLogsAmount)
+	assert.Equal(t, 5000, projectAfter.MaxLogsSizeMB)
+	assert.Equal(t, 365, projectAfter.MaxLogsLifeDays)
+	assert.Equal(t, 512, projectAfter.MaxLogSizeKB)
+}
+
+func Test_UpdateProjectLimits_WhenProjectHasPlanWithUnlimitedLimits_LimitsUpdated(t *testing.T) {
+	users_testing.CleanupPlans()
+	router := projects_testing.CreateTestRouter(
+		GetProjectController(),
+		GetMembershipController(),
+		users_controllers.GetUserPlanController(),
+	)
+	users_services.GetUserPlanService().SetAuditLogWriter(&AuditLogWriterStub{})
+
+	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
+	defer users_testing.ResetSettingsToDefaults()
+
+	planRequest := users_testing.CreateValidPlanRequest("Flexible Plan", users_enums.UserPlanTypePro)
+	planRequest.LogsPerSecondLimit = 100
+	planRequest.MaxLogsAmount = 0
+	planRequest.MaxLogsSizeMB = 0
+	planRequest.MaxLogsLifeDays = 90
+	planRequest.MaxLogSizeKB = 128
+	plan := users_testing.CreateTestPlanViaAPI(t, planRequest, admin.Token, router)
+
+	owner := users_testing.CreateTestUser(users_enums.UserRoleMember)
+	users_testing.AssignPlanToUser(owner.UserID.String(), plan.ID.String())
+
+	project, _ := projects_testing.CreateTestProjectWithToken("Test Project", owner.Token, router)
+
+	var projectBefore projects_models.Project
+	test_utils.MakeGetRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/projects/"+project.ID.String(),
+		"Bearer "+owner.Token,
+		http.StatusOK,
+		&projectBefore,
+	)
+
+	assert.NotNil(t, projectBefore.PlanID)
+	assert.Equal(t, plan.ID, *projectBefore.PlanID)
+	assert.Equal(t, 100, projectBefore.LogsPerSecondLimit)
+	assert.Equal(t, 90, projectBefore.MaxLogsLifeDays)
+	assert.Equal(t, 128, projectBefore.MaxLogSizeKB)
+
+	updateRequest := projects_models.Project{
+		Name:               projectBefore.Name,
+		IsApiKeyRequired:   false,
+		LogsPerSecondLimit: 8000,
+		MaxLogsAmount:      80_000_000,
+		MaxLogsSizeMB:      8000,
+		MaxLogsLifeDays:    500,
+		MaxLogSizeKB:       1024,
+	}
+
+	var projectAfter projects_models.Project
+	test_utils.MakePutRequestAndUnmarshal(
+		t,
+		router,
+		"/api/v1/projects/"+project.ID.String(),
+		"Bearer "+owner.Token,
+		updateRequest,
+		http.StatusOK,
+		&projectAfter,
+	)
+
+	assert.Equal(t, 100, projectAfter.LogsPerSecondLimit)
+	assert.Equal(t, int64(80_000_000), projectAfter.MaxLogsAmount)
+	assert.Equal(t, 8000, projectAfter.MaxLogsSizeMB)
+	assert.Equal(t, 90, projectAfter.MaxLogsLifeDays)
+	assert.Equal(t, 128, projectAfter.MaxLogSizeKB)
+}
+
 func extractAuditLogMessages(logs []*audit_logs.AuditLogDTO) []string {
 	messages := make([]string, len(logs))
 	for i, log := range logs {
@@ -734,4 +1261,9 @@ func getUserFromSignInResponse(response *users_dto.SignInResponseDTO) *users_mod
 		panic(err)
 	}
 	return user
+}
+
+type AuditLogWriterStub struct{}
+
+func (a *AuditLogWriterStub) WriteAuditLog(message string, userID *uuid.UUID, projectID *uuid.UUID) {
 }

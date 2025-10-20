@@ -20,7 +20,7 @@ func (r *UserRepository) CreateUser(user *users_models.User) error {
 func (r *UserRepository) GetUserByEmail(email string) (*users_models.User, error) {
 	var user users_models.User
 
-	if err := storage.GetDb().Where("email = ?", email).First(&user).Error; err != nil {
+	if err := storage.GetDb().Preload("Plan").Where("email = ?", email).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
@@ -34,7 +34,7 @@ func (r *UserRepository) GetUserByEmail(email string) (*users_models.User, error
 func (r *UserRepository) GetUserByID(userID uuid.UUID) (*users_models.User, error) {
 	var user users_models.User
 
-	if err := storage.GetDb().Where("id = ?", userID).First(&user).Error; err != nil {
+	if err := storage.GetDb().Preload("Plan").Where("id = ?", userID).First(&user).Error; err != nil {
 		return nil, err
 	}
 
@@ -96,6 +96,7 @@ func (r *UserRepository) GetUsers(
 	}
 
 	dataQuery := storage.GetDb().
+		Preload("Plan").
 		Limit(limit).
 		Offset(offset).
 		Order("created_at DESC")
@@ -164,4 +165,18 @@ func (r *UserRepository) UpdateUserInfo(userID uuid.UUID, name *string, email *s
 	return storage.GetDb().Model(&users_models.User{}).
 		Where("id = ?", userID).
 		Updates(updates).Error
+}
+
+func (r *UserRepository) CountUsersByPlan(planID uuid.UUID) (int64, error) {
+	var count int64
+	err := storage.GetDb().
+		Model(&users_models.User{}).
+		Where("plan_id = ?", planID).
+		Count(&count).Error
+
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }

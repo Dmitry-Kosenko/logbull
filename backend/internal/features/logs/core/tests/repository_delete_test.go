@@ -69,10 +69,43 @@ func Test_DeleteOldLogs_WhenOldLogsExist_DeletesLogsOlderThanSpecifiedTime(t *te
 	err = repository.DeleteOldLogs(projectID, cutoffTime)
 	assert.NoError(t, err)
 
+	var hasRecentLogs func(result *logs_core.LogQueryResponseDTO) bool = func(result *logs_core.LogQueryResponseDTO) bool {
+		for _, log := range result.Logs {
+			if log.Fields != nil {
+				if logType, ok := log.Fields["log_type"].(string); ok && logType == "recent" {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
+	var hasOldLogs func(result *logs_core.LogQueryResponseDTO) bool = func(result *logs_core.LogQueryResponseDTO) bool {
+		for _, log := range result.Logs {
+			if log.Fields != nil {
+				if logType, ok := log.Fields["log_type"].(string); ok && logType == "old" {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
+	var hasMediumLogs func(result *logs_core.LogQueryResponseDTO) bool = func(result *logs_core.LogQueryResponseDTO) bool {
+		for _, log := range result.Logs {
+			if log.Fields != nil {
+				if logType, ok := log.Fields["log_type"].(string); ok && logType == "medium" {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
 	// Wait for deletion to complete with condition check
 	afterDeletionResult := waitForDeletionWithCondition(t, repository, projectID, beforeDeletionQuery,
 		func(result *logs_core.LogQueryResponseDTO) bool {
-			return result.Total < beforeDeletionResult.Total
+			return hasRecentLogs(result) && !hasOldLogs(result) && !hasMediumLogs(result)
 		},
 		"logs should be deleted and total count should decrease", 60_000)
 
@@ -81,30 +114,10 @@ func Test_DeleteOldLogs_WhenOldLogsExist_DeletesLogsOlderThanSpecifiedTime(t *te
 	// Should have fewer logs than before
 	assert.Less(t, afterDeletionResult.Total, beforeDeletionResult.Total)
 
-	// Verify only recent logs remain
-	hasRecentLogs := false
-	hasOldLogs := false
-	hasMediumLogs := false
-
-	for _, log := range afterDeletionResult.Logs {
-		if log.Fields != nil {
-			if logType, ok := log.Fields["log_type"].(string); ok {
-				switch logType {
-				case "recent":
-					hasRecentLogs = true
-				case "old":
-					hasOldLogs = true
-				case "medium":
-					hasMediumLogs = true
-				}
-			}
-		}
-	}
-
 	// Recent logs should remain, old and medium should be deleted
-	assert.True(t, hasRecentLogs, "Recent logs should still exist")
-	assert.False(t, hasOldLogs, "Old logs should be deleted")
-	assert.False(t, hasMediumLogs, "Medium logs should be deleted")
+	assert.True(t, hasRecentLogs(afterDeletionResult), "Recent logs should still exist")
+	assert.False(t, hasOldLogs(afterDeletionResult), "Old logs should be deleted")
+	assert.False(t, hasMediumLogs(afterDeletionResult), "Medium logs should be deleted")
 }
 
 func Test_DeleteLogsByProject_WhenProjectLogsExist_DeletesAllProjectLogs(t *testing.T) {
@@ -297,7 +310,7 @@ func waitForDeletionWithCondition(
 	const pollIntervalMs = 50
 	maxAttempts := timeoutMs / pollIntervalMs
 
-	for attempt := 0; attempt < maxAttempts; attempt++ {
+	for attempt := range maxAttempts {
 		err := repository.ForceFlush()
 		assert.NoError(t, err, "Force flush should not fail on attempt %d", attempt+1)
 

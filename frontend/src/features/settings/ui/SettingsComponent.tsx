@@ -3,12 +3,13 @@ import { App, Button, Spin, Switch } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useRef, useState } from 'react';
 
-import { getApplicationServer } from '../../../constants';
+import { IS_CLOUD, getApplicationServer } from '../../../constants';
 import { queryApi } from '../../../entity/query/api/queryApi';
 import type { LogsStats } from '../../../entity/query/model/ProjectLogStats';
 import { settingsApi } from '../../../entity/users/api/settingsApi';
 import type { UsersSettings } from '../../../entity/users/model/UsersSettings';
 import { AuditLogsComponent } from './AuditLogsComponent';
+import { PlansSettingsComponent } from './PlansSettingsComponent';
 
 interface Props {
   contentHeight: number;
@@ -110,6 +111,8 @@ export function SettingsComponent({ contentHeight }: Props) {
       setHasChanges(false);
     }
   };
+
+  console.log(`isCloud = ${IS_CLOUD}`);
 
   return (
     <div className="flex grow pl-3">
@@ -310,6 +313,9 @@ export function SettingsComponent({ contentHeight }: Props) {
               <div className="text-sm text-gray-500">No statistics available</div>
             )}
           </div>
+
+          {/* Plans settings */}
+          {IS_CLOUD && <PlansSettingsComponent />}
 
           <AuditLogsComponent scrollContainerRef={scrollContainerRef} />
         </div>

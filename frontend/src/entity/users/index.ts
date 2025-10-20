@@ -2,6 +2,7 @@
 export { userApi } from './api/userApi';
 export { settingsApi } from './api/settingsApi';
 export { userManagementApi } from './api/userManagementApi';
+export { userPlanApi } from './api/userPlanApi';
 
 // Types and Enums
 export type { SignInRequest } from './model/SignInRequest';
@@ -20,3 +21,7 @@ export type { ChangeUserRoleRequest } from './model/ChangeUserRoleRequest';
 export type { UsersSettings } from './model/UsersSettings';
 export { UserRole } from './model/UserRole';
 export { ProjectRole } from './model/ProjectRole';
+export type { UserPlan } from './model/UserPlan';
+export { UserPlanType } from './model/UserPlanType';
+export type { CreatePlanRequest } from './model/CreatePlanRequest';
+export type { UpdatePlanRequest } from './model/UpdatePlanRequest';

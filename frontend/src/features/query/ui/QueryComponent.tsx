@@ -2,6 +2,8 @@ import { LoadingOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { App, Button, Divider, Spin, Switch } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
 
+import type { Project } from '../../../entity/projects';
+import { projectApi } from '../../../entity/projects';
 import {
   type GetQueryableFieldsRequest,
   type LogItem,
@@ -70,6 +72,7 @@ export const QueryComponentComponent = ({ projectId, contentHeight }: Props): Re
   const [pageSize] = useState(200);
   const [hasSearched, setHasSearched] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [project, setProject] = useState<Project | undefined>();
 
   // Refs
   const timeRangeRef = useRef<() => TimeRange | null>(null);
@@ -110,6 +113,16 @@ export const QueryComponentComponent = ({ projectId, contentHeight }: Props): Re
       console.warn('Failed to load query from localStorage:', error);
     }
     return null;
+  };
+
+  const loadProject = async () => {
+    try {
+      const projectData = await projectApi.getProject(projectId);
+      setProject(projectData);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load project';
+      message.error(errorMessage);
+    }
   };
 
   const loadQueryableFields = async () => {
@@ -352,7 +365,7 @@ export const QueryComponentComponent = ({ projectId, contentHeight }: Props): Re
   // useEffect hooks
   useEffect(() => {
     const initializeProject = async () => {
-      await loadQueryableFields();
+      await Promise.all([loadProject(), loadQueryableFields()]);
 
       // Load saved query for this project
       const savedQuery = loadQueryFromStorage();
@@ -464,6 +477,10 @@ export const QueryComponentComponent = ({ projectId, contentHeight }: Props): Re
             </Button>
           </div>
         </div>
+
+        {project?.plan?.warningText && (
+          <div className="ml-6 text-orange-600 opacity-60">{project.plan.warningText}</div>
+        )}
 
         <div className="space-y-4 p-6">
           <QueryBuilderComponent

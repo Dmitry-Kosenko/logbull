@@ -21,6 +21,7 @@ var projectService = &ProjectService{
 	users_services.GetUserService(),
 	audit_logs.GetAuditLogService(),
 	users_services.GetSettingsService(),
+	users_services.GetUserPlanService(),
 	[]projects_interfaces.ProjectDeletionListener{},
 	cache_utils.NewCacheUtil[projects_models.Project](cache.GetCache(), "lb_project:"),
 	singleflight.Group{},
