@@ -26,7 +26,7 @@ type LogCleanupBackgroundService struct {
 }
 
 const (
-	quotaEnforcementInterval = 1 * time.Minute
+	quotaEnforcementInterval = 5 * time.Second
 	retentionCleanupInterval = 1 * time.Minute
 )
 
@@ -60,6 +60,13 @@ func (s *LogCleanupBackgroundService) ExecuteAllTasksForTest() error {
 
 func (s *LogCleanupBackgroundService) quotaEnforcerWorker() {
 	defer s.wg.Done()
+	defer func() {
+		if r := recover(); r != nil {
+			s.logger.Error("Quota enforcer worker panicked and recovered",
+				slog.Any("panic", r),
+				slog.String("worker", "quotaEnforcer"))
+		}
+	}()
 
 	ticker := time.NewTicker(quotaEnforcementInterval)
 	defer ticker.Stop()
@@ -88,6 +95,13 @@ func (s *LogCleanupBackgroundService) quotaEnforcerWorker() {
 
 func (s *LogCleanupBackgroundService) retentionWorker() {
 	defer s.wg.Done()
+	defer func() {
+		if r := recover(); r != nil {
+			s.logger.Error("Retention worker panicked and recovered",
+				slog.Any("panic", r),
+				slog.String("worker", "retentionCleanup"))
+		}
+	}()
 
 	ticker := time.NewTicker(retentionCleanupInterval)
 	defer ticker.Stop()
@@ -196,25 +210,15 @@ func (s *LogCleanupBackgroundService) enforceProjectQuotas(
 	quotaViolated := false
 
 	if project.MaxLogsAmount > 0 && stats.TotalLogs > project.MaxLogsAmount {
-		s.logger.Info("Project exceeds log count quota, cleanup needed",
-			slog.String("projectId", projectID.String()),
-			slog.Int64("currentLogs", stats.TotalLogs),
-			slog.Int64("maxLogs", project.MaxLogsAmount))
-
-		targetLogs := int64(float64(project.MaxLogsAmount) * cleanupPercentage)
-		logsToDelete := stats.TotalLogs - targetLogs
+		logsToDelete := stats.TotalLogs - project.MaxLogsAmount
 
 		if logsToDelete > 0 {
-			cutoffTime := s.calculateCutoffTimeForLogCount(logsToDelete, stats)
+			cutoffTime := s.calculateCutoffTimeForLogCount(projectID, logsToDelete, stats)
 			if err := s.logCoreRepository.DeleteOldLogs(projectID, cutoffTime); err != nil {
 				s.logger.Error("Failed to delete old logs for count quota",
 					slog.String("projectId", projectID.String()),
 					slog.String("error", err.Error()))
 				quotaViolated = true
-			} else {
-				s.logger.Info("Deleted logs to enforce count quota",
-					slog.String("projectId", projectID.String()),
-					slog.Int64("deletedLogs", logsToDelete))
 			}
 		}
 	}
@@ -235,10 +239,6 @@ func (s *LogCleanupBackgroundService) enforceProjectQuotas(
 					slog.String("projectId", projectID.String()),
 					slog.String("error", err.Error()))
 				quotaViolated = true
-			} else {
-				s.logger.Info("Deleted logs to enforce size quota",
-					slog.String("projectId", projectID.String()),
-					slog.Float64("freedSizeMB", excessSizeMB))
 			}
 		}
 	}
@@ -266,6 +266,7 @@ func (s *LogCleanupBackgroundService) enforceLogRetention(projectID uuid.UUID, m
 }
 
 func (s *LogCleanupBackgroundService) calculateCutoffTimeForLogCount(
+	projectID uuid.UUID,
 	logsToDelete int64,
 	stats *logs_core.LogsStatsDTO,
 ) time.Time {
@@ -273,15 +274,47 @@ func (s *LogCleanupBackgroundService) calculateCutoffTimeForLogCount(
 		return time.Now().UTC()
 	}
 
-	logLifespan := stats.NewestLogTime.Sub(stats.OldestLogTime)
-	if logLifespan <= 0 {
-		return time.Now().UTC().Add(-24 * time.Hour)
+	if logsToDelete <= 0 {
+		return stats.OldestLogTime
 	}
 
-	percentageToDelete := float64(logsToDelete) / float64(stats.TotalLogs)
-	timeToDelete := time.Duration(float64(logLifespan) * percentageToDelete)
+	if logsToDelete >= stats.TotalLogs {
+		return stats.NewestLogTime
+	}
 
-	return stats.OldestLogTime.Add(timeToDelete)
+	queryRequest := &logs_core.LogQueryRequestDTO{
+		Limit:     2,
+		Offset:    int(logsToDelete - 1),
+		SortBy:    "timestamp",
+		SortOrder: "asc",
+	}
+
+	response, err := s.logCoreRepository.ExecuteQueryForProject(projectID, queryRequest)
+	if err != nil {
+		s.logger.Error("Failed to query log at offset for cutoff calculation",
+			slog.String("projectId", projectID.String()),
+			slog.Int64("offset", logsToDelete-1),
+			slog.String("error", err.Error()))
+		return time.Now().UTC()
+	}
+
+	if len(response.Logs) < 2 {
+		s.logger.Warn("Not enough logs found at offset for cutoff calculation",
+			slog.String("projectId", projectID.String()),
+			slog.Int64("offset", logsToDelete-1),
+			slog.Int("logsFound", len(response.Logs)))
+		if len(response.Logs) == 1 {
+			return response.Logs[0].Timestamp.Add(1 * time.Nanosecond)
+		}
+		return time.Now().UTC()
+	}
+
+	lastLogToDelete := response.Logs[0]
+	firstLogToKeep := response.Logs[1]
+	timeDiff := firstLogToKeep.Timestamp.Sub(lastLogToDelete.Timestamp)
+	cutoffTime := lastLogToDelete.Timestamp.Add(timeDiff / 2)
+
+	return cutoffTime
 }
 
 func (s *LogCleanupBackgroundService) calculateCutoffTimeForSize(

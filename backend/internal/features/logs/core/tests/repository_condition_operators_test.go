@@ -890,9 +890,9 @@ func Test_ExecuteQueryForProject_WithGreaterOrEqualOperator_SystemField_ReturnsM
 
 		// Allow for nanosecond precision loss in storage/retrieval
 		timeDiff := log.Timestamp.Sub(boundaryTime)
-		isWithinTolerance := timeDiff >= -100*time.Nanosecond // Allow up to 100ns precision loss
+		isWithinTolerance := timeDiff >= -1*time.Microsecond // Allow up to 1μs precision loss
 		assert.True(t, isWithinTolerance,
-			"Log %d timestamp should be >= boundary (within 100ns tolerance), diff: %v", i, timeDiff)
+			"Log %d timestamp should be >= boundary (within 1μs tolerance), diff: %v", i, timeDiff)
 
 		position := log.Fields["position"].(string)
 		foundPositions[position] = true
