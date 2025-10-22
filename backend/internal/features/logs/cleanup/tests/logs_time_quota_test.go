@@ -72,25 +72,16 @@ func Test_EnforceLogRetention_WhenMaxLogsLifeDaysIsSet_DeletesLogsOlderThanReten
 	allEntries := logs_core_tests.MergeLogEntries(oldLogEntries, recentLogEntries)
 	logs_core_tests.StoreTestLogsAndFlush(t, repository, allEntries)
 
-	// Verify logs were stored (should have 2 total)
-	statsBeforeCleanup, err := repository.GetProjectLogStats(project.ID)
-	assert.NoError(t, err)
+	// Wait for logs to appear
+	statsBeforeCleanup := WaitForLogsToAppear(t, repository, project.ID, 2, 30000)
 	assert.Equal(t, int64(2), statsBeforeCleanup.TotalLogs, "Should have 2 logs before cleanup")
 
 	// Execute cleanup service
-	err = cleanupService.ExecuteAllTasksForTest()
+	err := cleanupService.ExecuteAllTasksForTest()
 	assert.NoError(t, err, "Cleanup service should execute successfully")
 
-	// Force flush to ensure deletions are reflected
-	err = repository.ForceFlush()
-	assert.NoError(t, err, "Force flush should succeed")
-
-	// Wait a moment for delete operations to complete
-	time.Sleep(100 * time.Millisecond)
-
-	// Verify old logs were deleted and recent logs remain
-	statsAfterCleanup, err := repository.GetProjectLogStats(project.ID)
-	assert.NoError(t, err)
+	// Wait for delete operations to complete
+	statsAfterCleanup := WaitForLogDeletion(t, repository, project.ID, 1, 30000)
 	assert.Equal(t, int64(1), statsAfterCleanup.TotalLogs, "Should have 1 log remaining after cleanup")
 
 	// Verify the remaining log is the recent one by checking timestamp bounds
@@ -156,25 +147,16 @@ func Test_EnforceLogRetention_WhenMaxLogsLifeDaysIsZero_NoRetentionEnforcement(t
 	allEntries := logs_core_tests.MergeLogEntries(oldLogEntries, recentLogEntries)
 	logs_core_tests.StoreTestLogsAndFlush(t, repository, allEntries)
 
-	// Verify logs were stored (should have 2 total)
-	statsBeforeCleanup, err := repository.GetProjectLogStats(project.ID)
-	assert.NoError(t, err)
+	// Wait for logs to appear
+	statsBeforeCleanup := WaitForLogsToAppear(t, repository, project.ID, 2, 30000)
 	assert.Equal(t, int64(2), statsBeforeCleanup.TotalLogs, "Should have 2 logs before cleanup")
 
 	// Execute cleanup service
-	err = cleanupService.ExecuteAllTasksForTest()
+	err := cleanupService.ExecuteAllTasksForTest()
 	assert.NoError(t, err, "Cleanup service should execute successfully")
 
-	// Force flush to ensure any potential deletions are reflected
-	err = repository.ForceFlush()
-	assert.NoError(t, err, "Force flush should succeed")
-
-	// Wait a moment for any operations to complete
-	time.Sleep(100 * time.Millisecond)
-
-	// Verify NO logs were deleted (both old and recent should remain)
-	statsAfterCleanup, err := repository.GetProjectLogStats(project.ID)
-	assert.NoError(t, err)
+	// Wait for any operations to complete (should remain 2)
+	statsAfterCleanup := WaitForLogDeletion(t, repository, project.ID, 2, 30000)
 	assert.Equal(t, int64(2), statsAfterCleanup.TotalLogs, "Should still have 2 logs after cleanup with zero retention")
 }
 
@@ -233,25 +215,16 @@ func Test_EnforceLogRetention_WhenMaxLogsLifeDaysIsNegative_NoRetentionEnforceme
 	allEntries := logs_core_tests.MergeLogEntries(oldLogEntries, recentLogEntries)
 	logs_core_tests.StoreTestLogsAndFlush(t, repository, allEntries)
 
-	// Verify logs were stored (should have 2 total)
-	statsBeforeCleanup, err := repository.GetProjectLogStats(project.ID)
-	assert.NoError(t, err)
+	// Wait for logs to appear
+	statsBeforeCleanup := WaitForLogsToAppear(t, repository, project.ID, 2, 30000)
 	assert.Equal(t, int64(2), statsBeforeCleanup.TotalLogs, "Should have 2 logs before cleanup")
 
 	// Execute cleanup service
-	err = cleanupService.ExecuteAllTasksForTest()
+	err := cleanupService.ExecuteAllTasksForTest()
 	assert.NoError(t, err, "Cleanup service should execute successfully")
 
-	// Force flush to ensure any potential deletions are reflected
-	err = repository.ForceFlush()
-	assert.NoError(t, err, "Force flush should succeed")
-
-	// Wait a moment for any operations to complete
-	time.Sleep(100 * time.Millisecond)
-
-	// Verify NO logs were deleted (both old and recent should remain)
-	statsAfterCleanup, err := repository.GetProjectLogStats(project.ID)
-	assert.NoError(t, err)
+	// Wait for any operations to complete (should remain 2)
+	statsAfterCleanup := WaitForLogDeletion(t, repository, project.ID, 2, 30000)
 	assert.Equal(
 		t,
 		int64(2),
@@ -357,16 +330,8 @@ func Test_EnforceProjectQuotas_WithDifferentProjectsTimeQuotas_DeletesOnlyTarget
 	logs_core_tests.StoreTestLogsAndFlush(t, repository, project1Entries)
 	logs_core_tests.StoreTestLogsAndFlush(t, repository, project2Entries)
 
-	// Additional force flush to ensure all logs are indexed
-	err := repository.ForceFlush()
-	assert.NoError(t, err, "Initial force flush should succeed")
-
-	// Wait for logs to be fully indexed
-	time.Sleep(500 * time.Millisecond)
-
-	// Verify logs were stored for both projects
-	project1StatsBeforeCleanup, err := repository.GetProjectLogStats(project1.ID)
-	assert.NoError(t, err)
+	// Wait for logs to appear for both projects
+	project1StatsBeforeCleanup := WaitForLogsToAppear(t, repository, project1.ID, 2, 30000)
 	t.Logf(
 		"Project1 stats before cleanup: TotalLogs=%d, OldestTime=%v, NewestTime=%v",
 		project1StatsBeforeCleanup.TotalLogs,
@@ -375,8 +340,7 @@ func Test_EnforceProjectQuotas_WithDifferentProjectsTimeQuotas_DeletesOnlyTarget
 	)
 	assert.Equal(t, int64(2), project1StatsBeforeCleanup.TotalLogs, "Project1 should have 2 logs before cleanup")
 
-	project2StatsBeforeCleanup, err := repository.GetProjectLogStats(project2.ID)
-	assert.NoError(t, err)
+	project2StatsBeforeCleanup := WaitForLogsToAppear(t, repository, project2.ID, 2, 30000)
 	t.Logf(
 		"Project2 stats before cleanup: TotalLogs=%d, OldestTime=%v, NewestTime=%v",
 		project2StatsBeforeCleanup.TotalLogs,
@@ -386,19 +350,11 @@ func Test_EnforceProjectQuotas_WithDifferentProjectsTimeQuotas_DeletesOnlyTarget
 	assert.Equal(t, int64(2), project2StatsBeforeCleanup.TotalLogs, "Project2 should have 2 logs before cleanup")
 
 	// Execute cleanup service
-	err = cleanupService.ExecuteAllTasksForTest()
+	err := cleanupService.ExecuteAllTasksForTest()
 	assert.NoError(t, err, "Cleanup service should execute successfully")
 
-	// Force flush to ensure deletions are reflected
-	err = repository.ForceFlush()
-	assert.NoError(t, err, "Force flush should succeed")
-
-	// Wait a moment for delete operations to complete
-	time.Sleep(100 * time.Millisecond)
-
-	// Verify Project 1 had old logs deleted (7 days retention)
-	project1StatsAfterCleanup, err := repository.GetProjectLogStats(project1.ID)
-	assert.NoError(t, err)
+	// Wait for delete operations to complete for both projects
+	project1StatsAfterCleanup := WaitForLogDeletion(t, repository, project1.ID, 1, 30000)
 	t.Logf(
 		"Project1 stats after cleanup: TotalLogs=%d, OldestTime=%v, NewestTime=%v",
 		project1StatsAfterCleanup.TotalLogs,
@@ -413,8 +369,7 @@ func Test_EnforceProjectQuotas_WithDifferentProjectsTimeQuotas_DeletesOnlyTarget
 	)
 
 	// Verify Project 2 still has all logs (30 days retention)
-	project2StatsAfterCleanup, err := repository.GetProjectLogStats(project2.ID)
-	assert.NoError(t, err)
+	project2StatsAfterCleanup := WaitForLogDeletion(t, repository, project2.ID, 2, 30000)
 	t.Logf(
 		"Project2 stats after cleanup: TotalLogs=%d, OldestTime=%v, NewestTime=%v",
 		project2StatsAfterCleanup.TotalLogs,

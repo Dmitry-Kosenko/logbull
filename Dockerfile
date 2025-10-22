@@ -366,6 +366,19 @@ for i in {1..120}; do
     sleep 2
 done
 
+# Configure OpenSearch for single-node operation (no replicas)
+echo "Configuring OpenSearch for single-node operation..."
+curl -X PUT "http://127.0.0.1:9200/_template/single_node_template" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "index_patterns": ["*"],
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0
+    }
+  }' || echo "Warning: Failed to set OpenSearch template, continuing anyway..."
+echo "OpenSearch single-node configuration applied"
+
 # Start the main application
 echo "Starting Log Bull application..."
 exec ./main

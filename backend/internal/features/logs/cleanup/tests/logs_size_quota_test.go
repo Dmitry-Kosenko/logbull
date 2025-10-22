@@ -96,9 +96,8 @@ func Test_EnforceProjectQuotas_WhenStorageSizeExceedsMaxLogsSizeMB_DeletesOldest
 	// Store all logs
 	logs_core_tests.StoreTestLogsAndFlush(t, repository, allEntries)
 
-	// Verify initial size exceeds quota
-	statsBeforeCleanup, err := repository.GetProjectLogStats(project.ID)
-	assert.NoError(t, err)
+	// Wait for logs to appear
+	statsBeforeCleanup := WaitForLogsToAppear(t, repository, project.ID, 250, 30000)
 	assert.Equal(t, int64(250), statsBeforeCleanup.TotalLogs, "Should have 250 logs before cleanup")
 	assert.Greater(t, statsBeforeCleanup.TotalSizeMB, 1.0, "Should exceed 1MB quota before cleanup")
 
@@ -109,19 +108,17 @@ func Test_EnforceProjectQuotas_WhenStorageSizeExceedsMaxLogsSizeMB_DeletesOldest
 	)
 
 	// Execute cleanup service
-	err = cleanupService.ExecuteAllTasksForTest()
+	err := cleanupService.ExecuteAllTasksForTest()
 	assert.NoError(t, err, "Cleanup service should execute successfully")
 
-	// Force flush to ensure deletions are reflected
-	err = repository.ForceFlush()
-	assert.NoError(t, err, "Force flush should succeed")
-
-	// Wait for delete operations to complete
-	time.Sleep(100 * time.Millisecond)
-
-	// Verify size quota was enforced
-	statsAfterCleanup, err := repository.GetProjectLogStats(project.ID)
-	assert.NoError(t, err)
+	// Wait for size quota enforcement (wait for reduction below 1MB)
+	statsAfterCleanup := WaitForLogDeletionWithMaxCount(
+		t,
+		repository,
+		project.ID,
+		statsBeforeCleanup.TotalLogs-1,
+		30000,
+	)
 
 	t.Logf("After cleanup: TotalLogs=%d, TotalSizeMB=%.3f", statsAfterCleanup.TotalLogs, statsAfterCleanup.TotalSizeMB)
 
@@ -208,9 +205,8 @@ func Test_EnforceProjectQuotas_WhenStorageSizeIsWithinMaxLogsSizeMB_NoLogsDelete
 	// Store all logs
 	logs_core_tests.StoreTestLogsAndFlush(t, repository, allEntries)
 
-	// Verify initial size is well within quota
-	statsBeforeCleanup, err := repository.GetProjectLogStats(project.ID)
-	assert.NoError(t, err)
+	// Wait for logs to appear
+	statsBeforeCleanup := WaitForLogsToAppear(t, repository, project.ID, 50, 30000)
 	assert.Equal(t, int64(50), statsBeforeCleanup.TotalLogs, "Should have 50 logs before cleanup")
 	assert.Less(t, statsBeforeCleanup.TotalSizeMB, 1.0, "Should be well below 10MB quota before cleanup")
 
@@ -221,19 +217,11 @@ func Test_EnforceProjectQuotas_WhenStorageSizeIsWithinMaxLogsSizeMB_NoLogsDelete
 	)
 
 	// Execute cleanup service
-	err = cleanupService.ExecuteAllTasksForTest()
+	err := cleanupService.ExecuteAllTasksForTest()
 	assert.NoError(t, err, "Cleanup service should execute successfully")
 
-	// Force flush to ensure any potential changes are reflected
-	err = repository.ForceFlush()
-	assert.NoError(t, err, "Force flush should succeed")
-
-	// Wait for any operations to complete
-	time.Sleep(100 * time.Millisecond)
-
-	// Verify no logs were deleted since we're within quota
-	statsAfterCleanup, err := repository.GetProjectLogStats(project.ID)
-	assert.NoError(t, err)
+	// Wait for any operations to complete (should remain 50)
+	statsAfterCleanup := WaitForLogDeletion(t, repository, project.ID, 50, 30000)
 
 	t.Logf("After cleanup: TotalLogs=%d, TotalSizeMB=%.3f", statsAfterCleanup.TotalLogs, statsAfterCleanup.TotalSizeMB)
 
@@ -328,9 +316,8 @@ func Test_EnforceProjectQuotas_WhenMaxLogsSizeMBIsZero_NoSizeQuotaEnforcement(t 
 	// Store all logs
 	logs_core_tests.StoreTestLogsAndFlush(t, repository, allEntries)
 
-	// Verify logs were stored
-	statsBeforeCleanup, err := repository.GetProjectLogStats(project.ID)
-	assert.NoError(t, err)
+	// Wait for logs to appear
+	statsBeforeCleanup := WaitForLogsToAppear(t, repository, project.ID, 150, 30000)
 	assert.Equal(t, int64(150), statsBeforeCleanup.TotalLogs, "Should have 150 logs before cleanup")
 
 	t.Logf(
@@ -340,19 +327,11 @@ func Test_EnforceProjectQuotas_WhenMaxLogsSizeMBIsZero_NoSizeQuotaEnforcement(t 
 	)
 
 	// Execute cleanup service
-	err = cleanupService.ExecuteAllTasksForTest()
+	err := cleanupService.ExecuteAllTasksForTest()
 	assert.NoError(t, err, "Cleanup service should execute successfully")
 
-	// Force flush to ensure any potential changes are reflected
-	err = repository.ForceFlush()
-	assert.NoError(t, err, "Force flush should succeed")
-
-	// Wait for any operations to complete
-	time.Sleep(100 * time.Millisecond)
-
-	// Verify NO logs were deleted (zero size quota means no size-based enforcement)
-	statsAfterCleanup, err := repository.GetProjectLogStats(project.ID)
-	assert.NoError(t, err)
+	// Wait for any operations to complete (should remain 150)
+	statsAfterCleanup := WaitForLogDeletion(t, repository, project.ID, 150, 30000)
 
 	t.Logf("After cleanup: TotalLogs=%d, TotalSizeMB=%.3f", statsAfterCleanup.TotalLogs, statsAfterCleanup.TotalSizeMB)
 
@@ -449,9 +428,8 @@ func Test_EnforceProjectQuotas_WhenStorageSizeExceedsQuota_DeletesToNinetyPercen
 	// Store all logs
 	logs_core_tests.StoreTestLogsAndFlush(t, repository, allEntries)
 
-	// Verify initial size exceeds quota
-	statsBeforeCleanup, err := repository.GetProjectLogStats(project.ID)
-	assert.NoError(t, err)
+	// Wait for logs to appear
+	statsBeforeCleanup := WaitForLogsToAppear(t, repository, project.ID, 225, 30000)
 	assert.Equal(t, int64(225), statsBeforeCleanup.TotalLogs, "Should have 225 logs before cleanup")
 	assert.Greater(t, statsBeforeCleanup.TotalSizeMB, 1.0, "Should exceed 1MB quota before cleanup")
 
@@ -462,19 +440,17 @@ func Test_EnforceProjectQuotas_WhenStorageSizeExceedsQuota_DeletesToNinetyPercen
 	)
 
 	// Execute cleanup service
-	err = cleanupService.ExecuteAllTasksForTest()
+	err := cleanupService.ExecuteAllTasksForTest()
 	assert.NoError(t, err, "Cleanup service should execute successfully")
 
-	// Force flush to ensure deletions are reflected
-	err = repository.ForceFlush()
-	assert.NoError(t, err, "Force flush should succeed")
-
-	// Wait for delete operations to complete
-	time.Sleep(100 * time.Millisecond)
-
-	// Verify size was reduced to approximately 85% of quota (0.85MB for 1MB quota)
-	statsAfterCleanup, err := repository.GetProjectLogStats(project.ID)
-	assert.NoError(t, err)
+	// Wait for delete operations to complete (wait for reduction below initial count)
+	statsAfterCleanup := WaitForLogDeletionWithMaxCount(
+		t,
+		repository,
+		project.ID,
+		statsBeforeCleanup.TotalLogs-1,
+		30000,
+	)
 
 	t.Logf("After cleanup: TotalLogs=%d, TotalSizeMB=%.3f", statsAfterCleanup.TotalLogs, statsAfterCleanup.TotalSizeMB)
 
@@ -623,16 +599,8 @@ func Test_EnforceProjectQuotas_WithDifferentProjectsSizeQuotas_DeletesOnlyTarget
 	logs_core_tests.StoreTestLogsAndFlush(t, repository, project1Entries)
 	logs_core_tests.StoreTestLogsAndFlush(t, repository, project2Entries)
 
-	// Additional force flush to ensure all logs are indexed
-	err := repository.ForceFlush()
-	assert.NoError(t, err, "Initial force flush should succeed")
-
-	// Wait for logs to be fully indexed
-	time.Sleep(500 * time.Millisecond)
-
-	// Verify logs were stored for both projects
-	project1StatsBeforeCleanup, err := repository.GetProjectLogStats(project1.ID)
-	assert.NoError(t, err)
+	// Wait for logs to appear for both projects
+	project1StatsBeforeCleanup := WaitForLogsToAppear(t, repository, project1.ID, 150, 30000)
 	t.Logf(
 		"Project1 stats before cleanup: TotalLogs=%d, TotalSizeMB=%.3f",
 		project1StatsBeforeCleanup.TotalLogs,
@@ -641,8 +609,7 @@ func Test_EnforceProjectQuotas_WithDifferentProjectsSizeQuotas_DeletesOnlyTarget
 	assert.Equal(t, int64(150), project1StatsBeforeCleanup.TotalLogs, "Project1 should have 150 logs before cleanup")
 	assert.Greater(t, project1StatsBeforeCleanup.TotalSizeMB, 1.0, "Project1 should exceed 1MB quota")
 
-	project2StatsBeforeCleanup, err := repository.GetProjectLogStats(project2.ID)
-	assert.NoError(t, err)
+	project2StatsBeforeCleanup := WaitForLogsToAppear(t, repository, project2.ID, 50, 30000)
 	t.Logf(
 		"Project2 stats before cleanup: TotalLogs=%d, TotalSizeMB=%.3f",
 		project2StatsBeforeCleanup.TotalLogs,
@@ -652,19 +619,17 @@ func Test_EnforceProjectQuotas_WithDifferentProjectsSizeQuotas_DeletesOnlyTarget
 	assert.Less(t, project2StatsBeforeCleanup.TotalSizeMB, 1.0, "Project2 should be well below 10MB quota")
 
 	// Execute cleanup service
-	err = cleanupService.ExecuteAllTasksForTest()
+	err := cleanupService.ExecuteAllTasksForTest()
 	assert.NoError(t, err, "Cleanup service should execute successfully")
 
-	// Force flush to ensure deletions are reflected
-	err = repository.ForceFlush()
-	assert.NoError(t, err, "Force flush should succeed")
-
-	// Wait for delete operations to complete
-	time.Sleep(100 * time.Millisecond)
-
-	// Verify Project 1 had logs deleted (exceeded quota)
-	project1StatsAfterCleanup, err := repository.GetProjectLogStats(project1.ID)
-	assert.NoError(t, err)
+	// Wait for delete operations to complete for both projects
+	project1StatsAfterCleanup := WaitForLogDeletionWithMaxCount(
+		t,
+		repository,
+		project1.ID,
+		project1StatsBeforeCleanup.TotalLogs-1,
+		30000,
+	)
 	t.Logf(
 		"Project1 stats after cleanup: TotalLogs=%d, TotalSizeMB=%.3f",
 		project1StatsAfterCleanup.TotalLogs,
@@ -684,8 +649,7 @@ func Test_EnforceProjectQuotas_WithDifferentProjectsSizeQuotas_DeletesOnlyTarget
 	)
 
 	// Verify Project 2 has unchanged logs (did not exceed quota)
-	project2StatsAfterCleanup, err := repository.GetProjectLogStats(project2.ID)
-	assert.NoError(t, err)
+	project2StatsAfterCleanup := WaitForLogDeletion(t, repository, project2.ID, 50, 30000)
 	t.Logf(
 		"Project2 stats after cleanup: TotalLogs=%d, TotalSizeMB=%.3f",
 		project2StatsAfterCleanup.TotalLogs,
