@@ -619,7 +619,7 @@ func (r *LogCoreRepository) deleteByQuery(queryBody map[string]any, routing *uui
 		return fmt.Errorf("failed to marshal delete query: %w", err)
 	}
 
-	deleteEndpoint := r.baseURL + "/" + r.indexPattern + "/_delete_by_query?conflicts=proceed&wait_for_completion=false"
+	deleteEndpoint := r.baseURL + "/" + r.indexPattern + "/_delete_by_query?conflicts=proceed&wait_for_completion=true"
 	if routing != nil {
 		deleteEndpoint += "&routing=" + routing.String()
 	}
