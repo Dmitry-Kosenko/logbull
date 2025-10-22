@@ -135,15 +135,22 @@ jobs:
           VALKEY_URL=redis://localhost:6379
           EOF
 
+      - name: Clean up any existing test data
+        run: |
+          cd backend
+          sudo rm -rf opensearch-data pgdata valkey-data logbull-data || true
+          echo "Cleaned up any leftover test data from previous runs"
+
       - name: Prepare container directories
         run: |
           cd backend
-          # Create and set permissions for OpenSearch data directory
           mkdir -p opensearch-data
           chmod 777 opensearch-data
-          # Create PostgreSQL data directory
           mkdir -p pgdata
           chmod 777 pgdata
+          mkdir -p valkey-data
+          chmod 777 valkey-data
+          echo "Created fresh data directories with proper permissions"
 
       - name: Start test containers
         run: |
@@ -246,11 +253,18 @@ jobs:
           cd backend
           go test -failfast ./internal/...
 
-      - name: Stop test containers
+      - name: Stop test containers and clean up data
         if: always()
         run: |
           cd backend
+          echo "Stopping containers..."
           docker compose -f docker-compose.yml.example down -v
+          echo "Cleaning up backend data directories..."
+          sudo rm -rf opensearch-data pgdata valkey-data || true
+          cd ..
+          echo "Cleaning up application data directories..."
+          sudo rm -rf logbull-data || true
+          echo "Cleanup complete - all test data removed"
 
   determine-version:
     runs-on: ubuntu-latest
