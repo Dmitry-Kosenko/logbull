@@ -191,6 +191,33 @@ jobs:
 
           echo "All services are ready!"
 
+      - name: Configure OpenSearch for single-node testing
+        run: |
+          echo "Configuring OpenSearch for single-node mode (no replicas)..."
+
+          # Set default template to use 0 replicas for all indices
+          curl -X PUT "http://localhost:9200/_template/single_node_template" \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "index_patterns": ["*"],
+              "settings": {
+                "number_of_shards": 1,
+                "number_of_replicas": 0,
+                "refresh_interval": "1s"
+              }
+            }'
+
+          # Update cluster settings to ensure proper allocation
+          curl -X PUT "http://localhost:9200/_cluster/settings" \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "persistent": {
+                "cluster.routing.allocation.enable": "all"
+              }
+            }'
+
+          echo "OpenSearch configured for single-node testing successfully"
+
       - name: Create data and temp directories
         run: |
           # Create directories that are used for backups and restore
