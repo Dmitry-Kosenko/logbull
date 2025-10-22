@@ -216,6 +216,16 @@ jobs:
               }
             }'
 
+          # Update any existing indices to have 0 replicas
+          echo "Updating existing indices to have 0 replicas..."
+          curl -X PUT "http://localhost:9200/_all/_settings" \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "index": {
+                "number_of_replicas": 0
+              }
+            }' 2>/dev/null || echo "No existing indices to update"
+
           echo "OpenSearch configured for single-node testing successfully"
 
       - name: Create data and temp directories
