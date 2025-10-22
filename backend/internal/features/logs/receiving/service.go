@@ -57,12 +57,7 @@ func (s *LogReceivingService) SubmitLogs(
 		return nil, err
 	}
 
-	_, err = s.validateRateLimit(project)
-	if err != nil {
-		return nil, err
-	}
-
-	validLogs, errors, totalBatchSize := s.processLogItems(request.Logs, project, projectID, clientIP)
+	validLogs, errors, totalBatchSize := s.processLogItemsWithRateLimit(request.Logs, project, projectID, clientIP)
 
 	if err := s.validateTotalBatchSize(totalBatchSize); err != nil {
 		return nil, err
@@ -77,7 +72,7 @@ func (s *LogReceivingService) SubmitLogs(
 	}, nil
 }
 
-func (s *LogReceivingService) processLogItems(
+func (s *LogReceivingService) processLogItemsWithRateLimit(
 	logItems []LogItemRequestDTO,
 	project *projects_models.Project,
 	projectID uuid.UUID,
@@ -87,38 +82,31 @@ func (s *LogReceivingService) processLogItems(
 	var errors []LogSubmissionError
 	var totalBatchSize int
 
+	logsAcceptedCount := 0
+	maxLogsPerBatch := s.calculateMaxLogsPerBatch(project)
+
 	for i, logItem := range logItems {
 		logSize, err := s.calculateLogSize(&logItem)
-
 		if err != nil {
-			message := fmt.Sprintf("failed to calculate log size: %v", err)
-			if validationErr, ok := err.(*logs_core.ValidationError); ok {
-				message = validationErr.Code
-			}
-
-			errors = append(errors, LogSubmissionError{
-				Index:   i,
-				Message: message,
-			})
-
+			errors = append(errors, s.createLogError(i, err))
 			continue
 		}
 
 		totalBatchSize += logSize
-
 		logItem.Level = s.normalizeLogLevel(logItem.Level)
 
 		if err := s.validateLogItemWithSize(&logItem, project, logSize); err != nil {
-			message := err.Error()
-			if validationErr, ok := err.(*logs_core.ValidationError); ok {
-				message = validationErr.Code
-			}
+			errors = append(errors, s.createLogError(i, err))
+			continue
+		}
 
-			errors = append(errors, LogSubmissionError{
-				Index:   i,
-				Message: message,
-			})
+		if logsAcceptedCount >= maxLogsPerBatch {
+			errors = append(errors, LogSubmissionError{Index: i, Message: logs_core.ErrorRateLimitExceeded})
+			continue
+		}
 
+		if err := s.checkPerLogRateLimit(project); err != nil {
+			errors = append(errors, s.createLogError(i, err))
 			continue
 		}
 
@@ -126,7 +114,7 @@ func (s *LogReceivingService) processLogItems(
 			logItem.Fields[key] = s.convertFieldValueToString(value)
 		}
 
-		logItem := &logs_core.LogItem{
+		validLogs = append(validLogs, &logs_core.LogItem{
 			ID:        uuid.New(),
 			ProjectID: projectID,
 			Timestamp: time_parser.ParseTimestamp(logItem.Timestamp),
@@ -134,12 +122,20 @@ func (s *LogReceivingService) processLogItems(
 			Message:   s.prettyFormatIfMessageJSON(logItem.Message),
 			Fields:    logItem.Fields,
 			ClientIP:  clientIP,
-		}
+		})
 
-		validLogs = append(validLogs, logItem)
+		logsAcceptedCount++
 	}
 
 	return validLogs, errors, totalBatchSize
+}
+
+func (s *LogReceivingService) createLogError(index int, err error) LogSubmissionError {
+	message := err.Error()
+	if validationErr, ok := err.(*logs_core.ValidationError); ok {
+		message = validationErr.Code
+	}
+	return LogSubmissionError{Index: index, Message: message}
 }
 
 func (s *LogReceivingService) queueValidLogs(
@@ -288,30 +284,51 @@ func (s *LogReceivingService) validateIPFilter(project *projects_models.Project,
 	}
 }
 
-func (s *LogReceivingService) validateRateLimit(project *projects_models.Project) (*rate_limit.RateLimitResult, error) {
-	// If LogsPerSecondLimit is 0, it means unlimited - skip rate limiting
+func (s *LogReceivingService) calculateMaxLogsPerBatch(project *projects_models.Project) int {
 	if project.LogsPerSecondLimit == 0 {
-		return &rate_limit.RateLimitResult{
-			Allowed:   true,
-			Remaining: 1000, // Arbitrary high number for unlimited
-		}, nil
+		return MaxBatchSize
+	}
+
+	burstLimit := project.LogsPerSecondLimit * LogsBurstMultiplier
+
+	rateLimitInfo, err := s.rateLimiter.GetRateLimitInfo(project.ID, project.LogsPerSecondLimit, burstLimit)
+	if err != nil {
+		return 0
+	}
+
+	availableTokens := rateLimitInfo.Remaining
+	if rateLimitInfo.Allowed {
+		availableTokens++
+	}
+
+	maxLogsForThisBatch := project.LogsPerSecondLimit
+	if availableTokens < maxLogsForThisBatch {
+		maxLogsForThisBatch = availableTokens
+	}
+
+	return maxLogsForThisBatch
+}
+
+func (s *LogReceivingService) checkPerLogRateLimit(project *projects_models.Project) error {
+	if project.LogsPerSecondLimit == 0 {
+		return nil
 	}
 
 	burstLimit := project.LogsPerSecondLimit * LogsBurstMultiplier
 
 	result, err := s.rateLimiter.CheckRateLimit(project.ID, project.LogsPerSecondLimit, burstLimit)
 	if err != nil {
-		return nil, fmt.Errorf("rate limit check failed: %w", err)
+		return fmt.Errorf("rate limit check failed: %w", err)
 	}
 
 	if !result.Allowed {
-		return nil, &logs_core.ValidationError{
+		return &logs_core.ValidationError{
 			Code:    logs_core.ErrorRateLimitExceeded,
-			Message: fmt.Sprintf("logs per second limit exceeded, retry after %d seconds", result.RetryAfterSec),
+			Message: logs_core.ErrorRateLimitExceeded,
 		}
 	}
 
-	return result, nil
+	return nil
 }
 
 func (s *LogReceivingService) validateLogItemWithSize(
