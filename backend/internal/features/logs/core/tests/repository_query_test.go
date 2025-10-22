@@ -496,3 +496,186 @@ func Test_StoreLogsBatch_WithMixedFieldTypes_ConvertsAllToStrings(t *testing.T) 
 	assert.True(t, foundStringValue, "Should find string value 'ERR001'")
 	assert.True(t, foundBooleanAsString, "Should find boolean value stored as string 'true'")
 }
+
+func Test_ExecuteQueryForProject_WithNanosecondTimestamp_PreservesFullPrecision(t *testing.T) {
+	t.Parallel()
+	repository := logs_core.GetLogCoreRepository()
+	projectID := uuid.New()
+	uniqueTestSession := uuid.New().String()[:8]
+
+	originalTimestamp := time.Date(2024, 10, 22, 14, 30, 45, 123456789, time.UTC)
+
+	testLogEntries := CreateTestLogEntriesWithUniqueFields(projectID, originalTimestamp,
+		"Nanosecond precision test log", map[string]any{
+			"test_session": uniqueTestSession,
+		})
+
+	StoreTestLogsAndFlush(t, repository, testLogEntries)
+
+	query := &logs_core.LogQueryRequestDTO{
+		Query: &logs_core.QueryNode{
+			Type: logs_core.QueryNodeTypeCondition,
+			Condition: &logs_core.ConditionNode{
+				Field:    "test_session",
+				Operator: logs_core.ConditionOperatorEquals,
+				Value:    uniqueTestSession,
+			},
+		},
+		Limit: 10,
+	}
+
+	result, err := repository.ExecuteQueryForProject(projectID, query)
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, int64(1), result.Total, "Should find exactly 1 log")
+	assert.Len(t, result.Logs, 1, "Should return exactly 1 log")
+
+	retrievedLog := result.Logs[0]
+
+	assert.Equal(
+		t,
+		originalTimestamp,
+		retrievedLog.Timestamp,
+		"Retrieved timestamp should match original with full nanosecond precision. Expected: %v (UnixNano: %d), Got: %v (UnixNano: %d)",
+		originalTimestamp,
+		originalTimestamp.UnixNano(),
+		retrievedLog.Timestamp,
+		retrievedLog.Timestamp.UnixNano(),
+	)
+
+	assert.Equal(t, originalTimestamp.UnixNano(), retrievedLog.Timestamp.UnixNano(),
+		"UnixNano values should be exactly equal")
+
+	assert.Equal(t, int64(123456789), int64(retrievedLog.Timestamp.Nanosecond()),
+		"Nanosecond component should be exactly preserved (expected: 123456789)")
+
+	t.Logf("Original timestamp:  %v (UnixNano: %d, Nanos: %d)",
+		originalTimestamp, originalTimestamp.UnixNano(), originalTimestamp.Nanosecond())
+	t.Logf("Retrieved timestamp: %v (UnixNano: %d, Nanos: %d)",
+		retrievedLog.Timestamp, retrievedLog.Timestamp.UnixNano(), retrievedLog.Timestamp.Nanosecond())
+}
+
+func Test_ExecuteQueryForProject_WithMultipleLogsAt2NanosecondSteps_PreservesNanosecondPrecision(t *testing.T) {
+	t.Parallel()
+	repository := logs_core.GetLogCoreRepository()
+	projectID := uuid.New()
+	uniqueTestSession := uuid.New().String()[:8]
+
+	baseTimestamp := time.Date(2024, 10, 22, 15, 45, 30, 100000000, time.UTC)
+
+	timestamps := []time.Time{
+		baseTimestamp,
+		baseTimestamp.Add(2 * time.Nanosecond),
+		baseTimestamp.Add(4 * time.Nanosecond),
+		baseTimestamp.Add(6 * time.Nanosecond),
+		baseTimestamp.Add(8 * time.Nanosecond),
+	}
+
+	var allEntries map[uuid.UUID][]*logs_core.LogItem
+	for i, timestamp := range timestamps {
+		entries := CreateTestLogEntriesWithUniqueFields(projectID, timestamp,
+			"Log with 2ns precision", map[string]any{
+				"test_session": uniqueTestSession,
+				"log_index":    i,
+			})
+
+		if allEntries == nil {
+			allEntries = entries
+		} else {
+			allEntries = MergeLogEntries(allEntries, entries)
+		}
+	}
+
+	StoreTestLogsAndFlush(t, repository, allEntries)
+
+	query := &logs_core.LogQueryRequestDTO{
+		Query: &logs_core.QueryNode{
+			Type: logs_core.QueryNodeTypeCondition,
+			Condition: &logs_core.ConditionNode{
+				Field:    "test_session",
+				Operator: logs_core.ConditionOperatorEquals,
+				Value:    uniqueTestSession,
+			},
+		},
+		Limit:     10,
+		SortOrder: "asc",
+	}
+
+	result, err := repository.ExecuteQueryForProject(projectID, query)
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, int64(5), result.Total, "Should find exactly 5 logs")
+	assert.Len(t, result.Logs, 5, "Should return exactly 5 logs")
+
+	for i, retrievedLog := range result.Logs {
+		expectedTimestamp := timestamps[i]
+
+		assert.Equal(
+			t,
+			expectedTimestamp.UnixNano(),
+			retrievedLog.Timestamp.UnixNano(),
+			"Log %d: UnixNano values should match exactly. Expected: %d, Got: %d",
+			i,
+			expectedTimestamp.UnixNano(),
+			retrievedLog.Timestamp.UnixNano(),
+		)
+
+		assert.Equal(
+			t,
+			expectedTimestamp,
+			retrievedLog.Timestamp,
+			"Log %d: Timestamp should match exactly with 2ns precision",
+			i,
+		)
+
+		if i > 0 {
+			previousTimestamp := result.Logs[i-1].Timestamp
+			timeDiff := retrievedLog.Timestamp.Sub(previousTimestamp)
+			assert.Equal(
+				t,
+				int64(2),
+				timeDiff.Nanoseconds(),
+				"Log %d: Time difference from previous log should be exactly 2 nanoseconds",
+				i,
+			)
+		}
+
+		t.Logf("Log %d - Expected: %v (UnixNano: %d), Got: %v (UnixNano: %d)",
+			i, expectedTimestamp, expectedTimestamp.UnixNano(),
+			retrievedLog.Timestamp, retrievedLog.Timestamp.UnixNano())
+	}
+
+	timeRangeStart := baseTimestamp.Add(3 * time.Nanosecond)
+	timeRangeEnd := baseTimestamp.Add(7 * time.Nanosecond)
+
+	rangeQuery := &logs_core.LogQueryRequestDTO{
+		Query: &logs_core.QueryNode{
+			Type: logs_core.QueryNodeTypeCondition,
+			Condition: &logs_core.ConditionNode{
+				Field:    "test_session",
+				Operator: logs_core.ConditionOperatorEquals,
+				Value:    uniqueTestSession,
+			},
+		},
+		TimeRange: &logs_core.TimeRangeDTO{
+			From: &timeRangeStart,
+			To:   &timeRangeEnd,
+		},
+		Limit:     10,
+		SortOrder: "asc",
+	}
+
+	rangeResult, rangeErr := repository.ExecuteQueryForProject(projectID, rangeQuery)
+	assert.NoError(t, rangeErr)
+	assert.NotNil(t, rangeResult)
+	assert.Equal(t, int64(2), rangeResult.Total, "Should find exactly 2 logs in nanosecond time range")
+	assert.Len(t, rangeResult.Logs, 2, "Should return exactly 2 logs")
+
+	assert.Equal(t, timestamps[2].UnixNano(), rangeResult.Logs[0].Timestamp.UnixNano(),
+		"First log in range should be at +4ns (timestamps[2])")
+	assert.Equal(t, timestamps[3].UnixNano(), rangeResult.Logs[1].Timestamp.UnixNano(),
+		"Second log in range should be at +6ns (timestamps[3])")
+
+	t.Logf("Time range query: from %v to %v returned %d logs",
+		timeRangeStart, timeRangeEnd, rangeResult.Total)
+}

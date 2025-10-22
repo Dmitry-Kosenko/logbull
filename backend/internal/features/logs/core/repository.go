@@ -201,7 +201,9 @@ func (r *LogCoreRepository) ExecuteQueryForProject(
 	}
 
 	var openSearchResponse openSearchSearchResponse
-	if err := json.Unmarshal(responseBody, &openSearchResponse); err != nil {
+	decoder := json.NewDecoder(bytes.NewReader(responseBody))
+	decoder.UseNumber()
+	if err := decoder.Decode(&openSearchResponse); err != nil {
 		return nil, fmt.Errorf("failed to parse search response: %w", err)
 	}
 
@@ -215,7 +217,11 @@ func (r *LogCoreRepository) ExecuteQueryForProject(
 			ClientIP: asString(source["client_ip"]),
 		}
 		if timestampNanos, exists := source["timestamp"]; exists {
-			if nanos, ok := timestampNanos.(float64); ok {
+			if num, ok := timestampNanos.(json.Number); ok {
+				if nanos, err := num.Int64(); err == nil {
+					logItemDTO.Timestamp = time.Unix(0, nanos).UTC()
+				}
+			} else if nanos, ok := timestampNanos.(float64); ok {
 				logItemDTO.Timestamp = time.Unix(0, int64(nanos)).UTC()
 			}
 		}

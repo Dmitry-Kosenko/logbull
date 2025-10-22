@@ -498,7 +498,7 @@ func Test_EnforceProjectQuotas_WithDifferentProjectsCountQuotas_DeletesOnlyTarge
 	)
 }
 
-func Test_EnforceProjectQuotas_WhenLogsCreatedWithMillisecondPrecision_KeepsNewestLogs(t *testing.T) {
+func Test_EnforceProjectQuotas_WhenLogsCreatedWithNanosecondPrecision_KeepsNewestLogs(t *testing.T) {
 	users_testing.CleanupPlans()
 
 	router := projects_testing.CreateTestRouter(
@@ -508,7 +508,7 @@ func Test_EnforceProjectQuotas_WhenLogsCreatedWithMillisecondPrecision_KeepsNewe
 	owner := users_testing.CreateTestUser(users_enums.UserRoleMember)
 	uniqueID := uuid.New().String()[:8]
 
-	projectName := "Millisecond Precision Test " + uniqueID
+	projectName := "Nanosecond Precision Test " + uniqueID
 	project := projects_testing.CreateTestProject(projectName, owner, router)
 
 	updateData := &projects_models.Project{
@@ -529,8 +529,8 @@ func Test_EnforceProjectQuotas_WhenLogsCreatedWithMillisecondPrecision_KeepsNewe
 	for i := range 15 {
 		logEntries := logs_core_tests.CreateTestLogEntriesWithUniqueFields(
 			project.ID,
-			now.Add(time.Duration(i)*5*time.Millisecond),
-			"Log with millisecond precision",
+			now.Add(time.Duration(i)*10*time.Nanosecond),
+			"Log with nanosecond precision",
 			map[string]any{
 				"test_session": uniqueID,
 				"log_index":    i,
@@ -571,12 +571,12 @@ func Test_EnforceProjectQuotas_WhenLogsCreatedWithMillisecondPrecision_KeepsNewe
 		"Should have exactly 10 logs after cleanup - exactly 5 logs deleted (indices 0-4)",
 	)
 
-	expectedOldestRemainingTime := now.Add(time.Duration(5) * 5 * time.Millisecond)
-	expectedNewestTime := now.Add(time.Duration(14) * 5 * time.Millisecond)
+	expectedOldestRemainingTime := now.Add(time.Duration(5) * 10 * time.Nanosecond)
+	expectedNewestTime := now.Add(time.Duration(14) * 10 * time.Nanosecond)
 
 	assert.True(
 		t,
-		statsAfterCleanup.OldestLogTime.Sub(expectedOldestRemainingTime).Abs() < 5*time.Millisecond,
+		statsAfterCleanup.OldestLogTime.Sub(expectedOldestRemainingTime).Abs() < 1*time.Microsecond,
 		"Oldest remaining log should be around index 5 (time: %v, expected: %v)",
 		statsAfterCleanup.OldestLogTime,
 		expectedOldestRemainingTime,
@@ -584,9 +584,92 @@ func Test_EnforceProjectQuotas_WhenLogsCreatedWithMillisecondPrecision_KeepsNewe
 
 	assert.True(
 		t,
-		statsAfterCleanup.NewestLogTime.Sub(expectedNewestTime).Abs() < 5*time.Millisecond,
+		statsAfterCleanup.NewestLogTime.Sub(expectedNewestTime).Abs() < 1*time.Microsecond,
 		"Newest log should be around index 14 (time: %v, expected: %v)",
 		statsAfterCleanup.NewestLogTime,
 		expectedNewestTime,
+	)
+}
+
+func Test_EnforceProjectQuotas_WhenLogsCreatedWithinSameNanosecond_CannotDeleteLogs(t *testing.T) {
+	users_testing.CleanupPlans()
+
+	router := projects_testing.CreateTestRouter(
+		projects_controllers.GetProjectController(),
+		projects_controllers.GetMembershipController(),
+	)
+	owner := users_testing.CreateTestUser(users_enums.UserRoleMember)
+	uniqueID := uuid.New().String()[:8]
+
+	projectName := "Same Nanosecond Test " + uniqueID
+	project := projects_testing.CreateTestProject(projectName, owner, router)
+
+	updateData := &projects_models.Project{
+		Name:          project.Name,
+		MaxLogsAmount: 10,
+	}
+	updatedProject := projects_testing.UpdateProject(project, updateData, owner.Token, router)
+	project = updatedProject
+
+	t.Logf("Project MaxLogsAmount after update: %d", project.MaxLogsAmount)
+
+	repository := logs_core.GetLogCoreRepository()
+	cleanupService := logs_cleanup.GetLogCleanupBackgroundService()
+
+	now := time.Now().UTC()
+	var allEntries map[uuid.UUID][]*logs_core.LogItem
+
+	for i := range 15 {
+		logEntries := logs_core_tests.CreateTestLogEntriesWithUniqueFields(
+			project.ID,
+			now,
+			"Log within same nanosecond",
+			map[string]any{
+				"test_session": uniqueID,
+				"log_index":    i,
+			},
+		)
+		if allEntries == nil {
+			allEntries = logEntries
+		} else {
+			allEntries = logs_core_tests.MergeLogEntries(allEntries, logEntries)
+		}
+	}
+
+	logs_core_tests.StoreTestLogsAndFlush(t, repository, allEntries)
+
+	statsBeforeCleanup := WaitForLogsToAppear(t, repository, project.ID, 15, 30000)
+	assert.Equal(t, int64(15), statsBeforeCleanup.TotalLogs, "Should have 15 logs before cleanup")
+	assert.Equal(
+		t,
+		statsBeforeCleanup.OldestLogTime,
+		statsBeforeCleanup.NewestLogTime,
+		"All logs should have the same timestamp",
+	)
+
+	t.Logf(
+		"Before cleanup: TotalLogs=%d, OldestTime=%v, NewestTime=%v (all same)",
+		statsBeforeCleanup.TotalLogs,
+		statsBeforeCleanup.OldestLogTime,
+		statsBeforeCleanup.NewestLogTime,
+	)
+
+	err := cleanupService.ExecuteAllTasksForTest()
+	assert.NoError(t, err, "Cleanup service should execute successfully")
+
+	statsAfterCleanup := WaitForLogDeletion(t, repository, project.ID, 15, 5000)
+
+	t.Logf("After cleanup: TotalLogs=%d, OldestTime=%v, NewestTime=%v",
+		statsAfterCleanup.TotalLogs, statsAfterCleanup.OldestLogTime, statsAfterCleanup.NewestLogTime)
+
+	assert.Equal(
+		t,
+		statsBeforeCleanup.TotalLogs,
+		statsAfterCleanup.TotalLogs,
+		"No logs should be deleted when all logs have identical timestamps - cleanup algorithm cannot calculate proper cutoff time",
+	)
+
+	t.Logf(
+		"Edge case confirmed: When all logs share the same timestamp, the cleanup algorithm cannot calculate a proper cutoff time, so no logs are deleted despite exceeding the quota",
 	)
 }
