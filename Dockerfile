@@ -158,10 +158,6 @@ RUN echo '# Cluster configuration' > /opt/opensearch/config/opensearch.yml && \
     echo 'indices.query.bool.max_clause_count: 10000' >> /opt/opensearch/config/opensearch.yml && \
     echo 'indices.fielddata.cache.size: 40%' >> /opt/opensearch/config/opensearch.yml && \
     echo '' >> /opt/opensearch/config/opensearch.yml && \
-    echo '# Single-node index defaults (no replicas)' >> /opt/opensearch/config/opensearch.yml && \
-    echo 'index.number_of_shards: 1' >> /opt/opensearch/config/opensearch.yml && \
-    echo 'index.number_of_replicas: 0' >> /opt/opensearch/config/opensearch.yml && \
-    echo '' >> /opt/opensearch/config/opensearch.yml && \
     echo '# Thread pool configuration' >> /opt/opensearch/config/opensearch.yml && \
     echo 'thread_pool.write.queue_size: 1000' >> /opt/opensearch/config/opensearch.yml && \
     echo 'thread_pool.search.queue_size: 1000' >> /opt/opensearch/config/opensearch.yml && \
