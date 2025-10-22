@@ -11,7 +11,6 @@ import (
 )
 
 func Test_ExecuteQueryForProject_WithLogicalOrAndNotOperators_ReturnsMatchingLogs(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 
 	projectID := uuid.New()

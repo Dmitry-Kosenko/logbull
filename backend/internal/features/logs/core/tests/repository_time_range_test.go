@@ -11,7 +11,6 @@ import (
 )
 
 func Test_ExecuteQueryForProject_WithSpecificTimeRange_ReturnsOnlyLogsInRange(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	projectID := uuid.New()
 

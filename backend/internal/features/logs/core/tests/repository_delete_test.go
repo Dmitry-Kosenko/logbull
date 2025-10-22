@@ -11,7 +11,6 @@ import (
 )
 
 func Test_DeleteOldLogs_WhenOldLogsExist_DeletesLogsOlderThanSpecifiedTime(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	projectID := uuid.New()
 	uniqueTestSession := uuid.New().String()[:8]
@@ -121,7 +120,6 @@ func Test_DeleteOldLogs_WhenOldLogsExist_DeletesLogsOlderThanSpecifiedTime(t *te
 }
 
 func Test_DeleteLogsByProject_WhenProjectLogsExist_DeletesAllProjectLogs(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	project1ID := uuid.New()
 	project2ID := uuid.New()
@@ -212,7 +210,6 @@ func Test_DeleteLogsByProject_WhenProjectLogsExist_DeletesAllProjectLogs(t *test
 }
 
 func Test_DeleteLogsByProject_WithNonExistentProject_DoesNotFail(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	nonExistentProjectID := uuid.New()
 
@@ -222,7 +219,6 @@ func Test_DeleteLogsByProject_WithNonExistentProject_DoesNotFail(t *testing.T) {
 }
 
 func Test_DeleteOldLogs_WithNoOldLogs_DoesNotFail(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	projectID := uuid.New()
 	uniqueTestSession := uuid.New().String()[:8]

@@ -11,7 +11,6 @@ import (
 )
 
 func Test_ExecuteQueryForProject_MultipleProjects_OnlyReturnsRequestedProject(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	currentTime := time.Now().UTC()
 	uniqueTestSession := uuid.New().String()[:8]
@@ -87,7 +86,6 @@ func Test_ExecuteQueryForProject_MultipleProjects_OnlyReturnsRequestedProject(t 
 }
 
 func Test_ExecuteQueryForProject_SameLogContent_DifferentProjects_IsolatedCorrectly(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	currentTime := time.Now().UTC()
 	uniqueTestSession := uuid.New().String()[:8]
@@ -142,7 +140,6 @@ func Test_ExecuteQueryForProject_SameLogContent_DifferentProjects_IsolatedCorrec
 }
 
 func Test_ExecuteQueryForProject_CrossProjectQuery_NeverReturnsOtherProjectLogs(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	currentTime := time.Now().UTC()
 	uniqueTestSession := uuid.New().String()[:8]
@@ -205,7 +202,6 @@ func Test_ExecuteQueryForProject_CrossProjectQuery_NeverReturnsOtherProjectLogs(
 }
 
 func Test_ExecuteQueryForProject_NonExistentProject_ReturnsEmptyResults(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	nonExistentProject := uuid.New()
 
@@ -229,7 +225,6 @@ func Test_ExecuteQueryForProject_NonExistentProject_ReturnsEmptyResults(t *testi
 }
 
 func Test_ExecuteQueryForProject_ProjectIdFilter_AlwaysApplied(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	currentTime := time.Now().UTC()
 	uniqueTestSession := uuid.New().String()[:8]
@@ -267,7 +262,6 @@ func Test_ExecuteQueryForProject_ProjectIdFilter_AlwaysApplied(t *testing.T) {
 }
 
 func Test_ExecuteQueryForProject_ProjectIdInQuery_DoesNotConflict(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	currentTime := time.Now().UTC()
 	uniqueTestSession := uuid.New().String()[:8]
@@ -326,7 +320,6 @@ func Test_ExecuteQueryForProject_ProjectIdInQuery_DoesNotConflict(t *testing.T) 
 }
 
 func Test_DiscoverFields_MultipleProjects_OnlyReturnsProjectFields(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	currentTime := time.Now().UTC()
 	uniqueTestSession := uuid.New().String()[:8]
@@ -402,7 +395,6 @@ func Test_DiscoverFields_MultipleProjects_OnlyReturnsProjectFields(t *testing.T)
 }
 
 func Test_DeleteLogsByProject_OnlyDeletesSpecifiedProject(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	currentTime := time.Now().UTC()
 	uniqueTestSession := uuid.New().String()[:8]
@@ -482,7 +474,6 @@ func Test_DeleteLogsByProject_OnlyDeletesSpecifiedProject(t *testing.T) {
 }
 
 func Test_DeleteOldLogs_OnlyDeletesFromSpecifiedProject(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	baseTime := time.Now().UTC()
 	uniqueTestSession := uuid.New().String()[:8]
@@ -570,7 +561,6 @@ func Test_DeleteOldLogs_OnlyDeletesFromSpecifiedProject(t *testing.T) {
 }
 
 func Test_ExecuteQueryForProject_TotalCount_OnlyCountsProjectLogs(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	currentTime := time.Now().UTC()
 	uniqueTestSession := uuid.New().String()[:8]
@@ -609,7 +599,6 @@ func Test_ExecuteQueryForProject_TotalCount_OnlyCountsProjectLogs(t *testing.T) 
 }
 
 func Test_ExecuteQueryForProject_Pagination_OnlyPaginatesProjectLogs(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	currentTime := time.Now().UTC()
 	uniqueTestSession := uuid.New().String()[:8]
@@ -695,7 +684,6 @@ func Test_ExecuteQueryForProject_Pagination_OnlyPaginatesProjectLogs(t *testing.
 }
 
 func Test_ExecuteQueryForProject_Sorting_OnlySortsProjectLogs(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	baseTime := time.Now().UTC()
 	uniqueTestSession := uuid.New().String()[:8]
@@ -781,7 +769,6 @@ func Test_ExecuteQueryForProject_Sorting_OnlySortsProjectLogs(t *testing.T) {
 }
 
 func Test_ExecuteQueryForProject_CannotAccessOtherProjectViaQuery(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	currentTime := time.Now().UTC()
 	uniqueTestSession := uuid.New().String()[:8]
@@ -893,7 +880,6 @@ func Test_ExecuteQueryForProject_CannotAccessOtherProjectViaQuery(t *testing.T) 
 }
 
 func Test_ExecuteQueryForProject_ProjectIdManipulation_HasNoEffect(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	currentTime := time.Now().UTC()
 	uniqueTestSession := uuid.New().String()[:8]

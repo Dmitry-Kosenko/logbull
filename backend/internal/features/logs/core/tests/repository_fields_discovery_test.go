@@ -12,7 +12,6 @@ import (
 )
 
 func Test_DiscoverFields_WithStoredLogsContainingCustomFields_ReturnsDiscoveredFields(t *testing.T) {
-	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
 	projectID := uuid.New()
 	uniqueTestSession := uuid.New().String()[:8]
@@ -58,7 +57,6 @@ func Test_DiscoverFields_WithStoredLogsContainingCustomFields_ReturnsDiscoveredF
 }
 
 func Test_DiscoverFields_WithUnavailableLogsStorage_PropagatesError(t *testing.T) {
-	t.Parallel()
 	unavailableRepository := logs_core.GetUnavailableLogCoreRepository()
 	projectID := uuid.New()
 
