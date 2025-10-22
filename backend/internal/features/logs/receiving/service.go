@@ -68,7 +68,7 @@ func (s *LogReceivingService) SubmitLogs(
 		return nil, err
 	}
 
-	s.queueValidLogs(validLogs, projectID)
+	s.queueValidLogs(validLogs, project)
 
 	return &SubmitLogsResponseDTO{
 		Accepted: len(validLogs),
@@ -142,7 +142,10 @@ func (s *LogReceivingService) processLogItems(
 	return validLogs, errors, totalBatchSize
 }
 
-func (s *LogReceivingService) queueValidLogs(validLogs []*logs_core.LogItem, projectID uuid.UUID) {
+func (s *LogReceivingService) queueValidLogs(
+	validLogs []*logs_core.LogItem,
+	project *projects_models.Project,
+) {
 	if len(validLogs) == 0 {
 		return
 	}
@@ -152,7 +155,7 @@ func (s *LogReceivingService) queueValidLogs(validLogs []*logs_core.LogItem, pro
 	for _, log := range validLogs {
 		if err := s.logWorkerService.QueueLog(log); err != nil {
 			s.logger.Error("Failed to queue log",
-				slog.String("projectId", projectID.String()),
+				slog.String("projectId", project.ID.String()),
 				slog.String("logId", log.ID.String()),
 				slog.String("error", err.Error()))
 		} else {

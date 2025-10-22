@@ -10,6 +10,7 @@ import (
 
 	"logbull/internal/config"
 	logs_core "logbull/internal/features/logs/core"
+	projects_models "logbull/internal/features/projects/models"
 	cache_utils "logbull/internal/util/cache"
 
 	"github.com/google/uuid"
@@ -63,10 +64,8 @@ type LogWorkerService struct {
 }
 
 const (
-	batchProcessingInterval = 1 * time.Second // Base processing interval optimized for 10 RPS expected load
-
-	// Fixed settings optimized for 10k RPS capacity
-	cacheToLogsStorageWritingBatchSize = 1_000 // Fixed batch size for dequeuing from Valkey
+	batchProcessingInterval            = 1 * time.Second // Base processing interval optimized for 10 RPS expected load
+	cacheToLogsStorageWritingBatchSize = 5_000           // Fixed batch size for dequeuing from Valkey
 
 	logQueueKey = "logbull:logs:queue" // Valkey queue key for log items
 
@@ -152,6 +151,27 @@ func (s *LogWorkerService) QueueLog(log *logs_core.LogItem) error {
 	s.accumulatedLogShards[shard] = append(s.accumulatedLogShards[shard], log)
 
 	return nil
+}
+
+// if we see that project is exceeding the limit even before it reach OpenSearch,
+// we cut the logs queue to avoid overwhelming the system.
+func (s *LogWorkerService) CutLogsQueueIfProjectLimitedExeeded(project *projects_models.Project) {
+	shard := s.hashProjectIDToShard(project.ID)
+
+	allowedExceedCount := int64(1_000)
+
+	s.accumulationMutexes[shard].Lock()
+	defer s.accumulationMutexes[shard].Unlock()
+
+	if project.MaxLogsAmount > 0 {
+		maxAllowed := int(project.MaxLogsAmount + allowedExceedCount)
+		currentCount := len(s.accumulatedLogShards[shard])
+
+		if currentCount > maxAllowed {
+			cutCount := currentCount - maxAllowed
+			s.accumulatedLogShards[shard] = s.accumulatedLogShards[shard][cutCount:]
+		}
+	}
 }
 
 // ExecuteBackgroundTasksForTest executes log flushing tasks once in a blocking way.

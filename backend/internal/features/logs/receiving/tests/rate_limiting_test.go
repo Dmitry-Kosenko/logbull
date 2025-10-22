@@ -25,7 +25,7 @@ func Test_SubmitLogs_WithinRateLimit_LogsAccepted(t *testing.T) {
 	testData := setupRateLimitTest("Within Rate Limit Test", 10) // 10 logs per second
 
 	// Submit 5 logs (well within limit)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		response := submitTestLogsForRateLimit(
 			t,
 			testData.Router,
