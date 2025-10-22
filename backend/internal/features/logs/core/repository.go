@@ -625,45 +625,62 @@ func (r *LogCoreRepository) deleteByQuery(queryBody map[string]any, routing *uui
 		return fmt.Errorf("failed to marshal delete query: %w", err)
 	}
 
-	deleteEndpoint := r.baseURL + "/" + r.indexPattern + "/_delete_by_query?conflicts=proceed&wait_for_completion=true"
+	params := make([]string, 0, 8)
+	params = append(params,
+		"conflicts=proceed",
+		"wait_for_completion=true",
+		"refresh=true",
+		"ignore_unavailable=true",
+		"allow_no_indices=true",
+		"expand_wildcards=open,hidden",
+		"timeout=60s",
+		"requests_per_second=-1",
+	)
 	if routing != nil {
-		deleteEndpoint += "&routing=" + routing.String()
+		params = append(params, "routing="+routing.String())
 	}
 
-	deleteRequest, err := http.NewRequest("POST", deleteEndpoint, bytes.NewReader(queryPayload))
-	if err != nil {
-		return fmt.Errorf("failed to create delete_by_query request: %w", err)
-	}
-	deleteRequest.Header.Set("Content-Type", "application/json")
+	deleteEndpoint := fmt.Sprintf("%s/%s/_delete_by_query?%s",
+		r.baseURL, r.indexPattern, strings.Join(params, "&"))
 
-	deleteResponse, err := r.client.Do(deleteRequest)
-	if err != nil {
-		return fmt.Errorf("failed to execute delete_by_query: %w", err)
-	}
-	defer func() {
-		if closeErr := deleteResponse.Body.Close(); closeErr != nil {
-			r.logger.Error("failed to close delete response body", "error", closeErr)
-		}
-	}()
-
-	if deleteResponse.StatusCode < 200 || deleteResponse.StatusCode >= 300 {
-		responseBody, err := io.ReadAll(deleteResponse.Body)
+	const maxAttempts = 3
+	var lastBody []byte
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		req, err := http.NewRequest("POST", deleteEndpoint, bytes.NewReader(queryPayload))
 		if err != nil {
-			return fmt.Errorf(
-				"OpenSearch delete_by_query returned status %d and failed to read response body: %w",
-				deleteResponse.StatusCode,
-				err,
-			)
+			return fmt.Errorf("failed to create delete_by_query request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := r.client.Do(req)
+		if err != nil {
+			if attempt == maxAttempts {
+				return fmt.Errorf("failed to execute delete_by_query: %w", err)
+			}
+			time.Sleep(time.Duration(attempt*attempt) * 200 * time.Millisecond)
+			continue
 		}
 
-		return fmt.Errorf(
-			"OpenSearch delete_by_query returned status %d: %s",
-			deleteResponse.StatusCode,
-			string(responseBody),
-		)
+		body, _ := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		lastBody = body
+
+		if resp.StatusCode == 429 || resp.StatusCode == 502 || resp.StatusCode == 503 || resp.StatusCode == 504 {
+			if attempt == maxAttempts {
+				return fmt.Errorf("OpenSearch delete_by_query returned status %d: %s", resp.StatusCode, string(body))
+			}
+			time.Sleep(time.Duration(attempt*attempt) * 250 * time.Millisecond)
+			continue
+		}
+
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return fmt.Errorf("OpenSearch delete_by_query returned status %d: %s", resp.StatusCode, string(body))
+		}
+
+		return nil
 	}
 
-	return nil
+	return fmt.Errorf("OpenSearch delete_by_query failed after retries: %s", string(lastBody))
 }
 
 func (r *LogCoreRepository) TestOpenSearchConnection() error {
@@ -692,6 +709,7 @@ func (r *LogCoreRepository) TestOpenSearchConnection() error {
 				err,
 			)
 		}
+
 		return fmt.Errorf(
 			"OpenSearch health check returned status %d: %s",
 			healthResponse.StatusCode,
