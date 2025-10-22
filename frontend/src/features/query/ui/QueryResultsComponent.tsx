@@ -375,7 +375,9 @@ export const QueryResultsComponent = ({
                       {dayjs(log.timestamp).fromNow()}
                     </div>
                   </div>
+
                   <div style={{ width: '85px' }}>{renderLogLevel(log.level)}</div>
+
                   <div
                     className={`${showFields ? 'flex-1' : 'flex-[2]'} font-mono text-xs break-all text-gray-900 ${
                       isExpanded && displayMessage.includes(' ') ? 'whitespace-pre-wrap' : ''
@@ -386,6 +388,7 @@ export const QueryResultsComponent = ({
                       <span className="ml-1 text-emerald-600 hover:text-emerald-700">(expand)</span>
                     )}
                   </div>
+
                   {showFields && (
                     <>
                       <div style={{ width: '10px' }} />

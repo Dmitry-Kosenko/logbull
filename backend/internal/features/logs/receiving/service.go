@@ -122,6 +122,10 @@ func (s *LogReceivingService) processLogItems(
 			continue
 		}
 
+		for key, value := range logItem.Fields {
+			logItem.Fields[key] = s.convertFieldValueToString(value)
+		}
+
 		logItem := &logs_core.LogItem{
 			ID:        uuid.New(),
 			ProjectID: projectID,
@@ -464,5 +468,22 @@ func (s *LogReceivingService) normalizeLogLevel(level logs_core.LogLevel) logs_c
 		}
 
 		return level
+	}
+}
+
+func (s *LogReceivingService) convertFieldValueToString(value any) string {
+	switch v := value.(type) {
+	case float64:
+		if v == float64(int64(v)) {
+			return fmt.Sprintf("%.0f", v)
+		}
+		return fmt.Sprintf("%f", v)
+	case float32:
+		if v == float32(int32(v)) {
+			return fmt.Sprintf("%.0f", v)
+		}
+		return fmt.Sprintf("%f", v)
+	default:
+		return fmt.Sprintf("%v", v)
 	}
 }
