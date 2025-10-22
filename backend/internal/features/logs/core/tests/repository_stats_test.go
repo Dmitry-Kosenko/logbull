@@ -45,9 +45,7 @@ func Test_GetProjectLogStats_WithMultipleLogs_ReturnsCorrectStats(t *testing.T) 
 	allEntries = MergeLogEntries(allEntries, newestLogEntries)
 	StoreTestLogsAndFlush(t, repository, allEntries)
 
-	stats, err := repository.GetProjectLogStats(projectID)
-	assert.NoError(t, err)
-	assert.NotNil(t, stats)
+	stats := WaitForLogsToAppear(t, repository, projectID, 3, 30000)
 
 	assert.Equal(t, int64(3), stats.TotalLogs, "Should have 3 total logs")
 	assert.Equal(t, float64(0), math.Round(stats.TotalSizeMB*100)/100, "TotalSizeMB should be 0")
@@ -63,7 +61,10 @@ func Test_GetProjectLogStats_WithMultipleLogs_ReturnsCorrectStats(t *testing.T) 
 func Test_GetProjectLogStats_WithNoLogs_ReturnsZeroStats(t *testing.T) {
 	t.Parallel()
 	repository := logs_core.GetLogCoreRepository()
-	projectID := uuid.New() // Empty project with no logs
+	projectID := uuid.New()
+
+	err := repository.ForceFlush()
+	assert.NoError(t, err)
 
 	stats, err := repository.GetProjectLogStats(projectID)
 	assert.NoError(t, err)
@@ -90,9 +91,7 @@ func Test_GetProjectLogStats_WithSingleLog_ReturnsCorrectStats(t *testing.T) {
 
 	StoreTestLogsAndFlush(t, repository, singleLogEntries)
 
-	stats, err := repository.GetProjectLogStats(projectID)
-	assert.NoError(t, err)
-	assert.NotNil(t, stats)
+	stats := WaitForLogsToAppear(t, repository, projectID, 1, 30000)
 
 	assert.Equal(t, int64(1), stats.TotalLogs, "Should have 1 total log")
 	assert.Equal(t, float64(0), math.Round(stats.TotalSizeMB*100)/100, "TotalSizeMB should be 0")
@@ -132,9 +131,7 @@ func Test_GetProjectLogStats_WithTwelveHourTimeGap_ReturnsCorrectTimestamps(t *t
 	allEntries := MergeLogEntries(oldLogEntries, newLogEntries)
 	StoreTestLogsAndFlush(t, repository, allEntries)
 
-	stats, err := repository.GetProjectLogStats(projectID)
-	assert.NoError(t, err)
-	assert.NotNil(t, stats)
+	stats := WaitForLogsToAppear(t, repository, projectID, 2, 30000)
 
 	assert.Equal(t, int64(2), stats.TotalLogs, "Should have 2 total logs")
 	assert.Greater(t, stats.TotalSizeMB, float64(0), "TotalSizeMB should be greater than 0")
@@ -200,9 +197,7 @@ func Test_GetSystemLogStats_WithMultipleProjects_ReturnsAggregatedStats(t *testi
 	StoreTestLogsAndFlush(t, repository, allEntries)
 
 	// Get system-wide stats after adding our logs
-	statsAfter, err := repository.GetSystemLogStats()
-	assert.NoError(t, err)
-	assert.NotNil(t, statsAfter)
+	statsAfter := WaitForSystemLogsToAppear(t, repository, statsBefore.TotalLogs+3, 30000)
 
 	// Verify total logs increased by at least 3
 	assert.GreaterOrEqual(t, statsAfter.TotalLogs, statsBefore.TotalLogs+3,

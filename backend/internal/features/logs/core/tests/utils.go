@@ -233,3 +233,76 @@ func WaitForLogsPartialDeletion(
 		time.Sleep(checkInterval)
 	}
 }
+
+func WaitForLogsToAppear(
+	t *testing.T,
+	repository *logs_core.LogCoreRepository,
+	projectID uuid.UUID,
+	expectedCount int64,
+	timeoutMs int,
+) *logs_core.LogsStatsDTO {
+	const pollIntervalMs = 50
+	maxAttempts := timeoutMs / pollIntervalMs
+
+	for attempt := range maxAttempts {
+		err := repository.ForceFlush()
+		assert.NoError(t, err, "Force flush should not fail on attempt %d", attempt+1)
+
+		stats, err := repository.GetProjectLogStats(projectID)
+		assert.NoError(t, err, "GetProjectLogStats should not fail on attempt %d", attempt+1)
+
+		if stats.TotalLogs == expectedCount {
+			return stats
+		}
+
+		time.Sleep(pollIntervalMs * time.Millisecond)
+	}
+
+	err := repository.ForceFlush()
+	assert.NoError(t, err, "Final force flush should not fail")
+
+	stats, err := repository.GetProjectLogStats(projectID)
+	assert.NoError(t, err, "Final GetProjectLogStats should not fail")
+
+	assert.Equal(t, expectedCount, stats.TotalLogs,
+		"Expected %d logs to appear, but found %d (timeout after %dms)",
+		expectedCount, stats.TotalLogs, timeoutMs)
+
+	return stats
+}
+
+func WaitForSystemLogsToAppear(
+	t *testing.T,
+	repository *logs_core.LogCoreRepository,
+	minExpectedCount int64,
+	timeoutMs int,
+) *logs_core.LogsStatsDTO {
+	const pollIntervalMs = 50
+	maxAttempts := timeoutMs / pollIntervalMs
+
+	for attempt := range maxAttempts {
+		err := repository.ForceFlush()
+		assert.NoError(t, err, "Force flush should not fail on attempt %d", attempt+1)
+
+		stats, err := repository.GetSystemLogStats()
+		assert.NoError(t, err, "GetSystemLogStats should not fail on attempt %d", attempt+1)
+
+		if stats.TotalLogs >= minExpectedCount {
+			return stats
+		}
+
+		time.Sleep(pollIntervalMs * time.Millisecond)
+	}
+
+	err := repository.ForceFlush()
+	assert.NoError(t, err, "Final force flush should not fail")
+
+	stats, err := repository.GetSystemLogStats()
+	assert.NoError(t, err, "Final GetSystemLogStats should not fail")
+
+	assert.GreaterOrEqual(t, stats.TotalLogs, minExpectedCount,
+		"Expected at least %d logs to appear, but found %d (timeout after %dms)",
+		minExpectedCount, stats.TotalLogs, timeoutMs)
+
+	return stats
+}

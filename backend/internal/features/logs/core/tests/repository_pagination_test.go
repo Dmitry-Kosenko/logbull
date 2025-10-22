@@ -20,9 +20,6 @@ func Test_ExecuteQueryForProject_WithPaginationAndOffset_ReturnsSameTotalCount(t
 	testLogEntries := CreateBatchLogEntries(projectID, 12, currentTime, uniqueTestSession)
 	StoreTestLogsAndFlush(t, repository, testLogEntries)
 
-	// Add additional wait to ensure indexing is complete
-	time.Sleep(1 * time.Second)
-
 	firstPageQuery := &logs_core.LogQueryRequestDTO{
 		Query: &logs_core.QueryNode{
 			Type: logs_core.QueryNodeTypeCondition,
@@ -36,6 +33,9 @@ func Test_ExecuteQueryForProject_WithPaginationAndOffset_ReturnsSameTotalCount(t
 		Offset:    0,
 		SortOrder: "desc",
 	}
+
+	stats := WaitForLogsToAppear(t, repository, projectID, 12, 30000)
+	assert.Equal(t, int64(12), stats.TotalLogs, "Should have 12 logs before pagination")
 
 	firstPageResult, firstPageErr := repository.ExecuteQueryForProject(projectID, firstPageQuery)
 	assert.NoError(t, firstPageErr)
@@ -70,7 +70,8 @@ func Test_ExecuteQueryForProject_WithNanosecondPrecision_MaintainsProperDESCOrde
 	testLogEntries := createNanosecondLogEntries(projectID, logCount, baseTime, uniqueTestSession)
 	StoreTestLogsAndFlush(t, repository, testLogEntries)
 
-	time.Sleep(1 * time.Second)
+	stats := WaitForLogsToAppear(t, repository, projectID, int64(logCount), 30000)
+	assert.Equal(t, int64(logCount), stats.TotalLogs, "Should have all logs before pagination")
 
 	baseQuery := &logs_core.LogQueryRequestDTO{
 		Query: &logs_core.QueryNode{
