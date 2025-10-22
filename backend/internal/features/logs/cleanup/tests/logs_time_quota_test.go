@@ -18,7 +18,8 @@ import (
 )
 
 func Test_EnforceLogRetention_WhenMaxLogsLifeDaysIsSet_DeletesLogsOlderThanRetentionPeriod(t *testing.T) {
-	// Setup test environment
+	users_testing.CleanupPlans()
+
 	router := projects_testing.CreateTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -93,7 +94,8 @@ func Test_EnforceLogRetention_WhenMaxLogsLifeDaysIsSet_DeletesLogsOlderThanReten
 }
 
 func Test_EnforceLogRetention_WhenMaxLogsLifeDaysIsZero_NoRetentionEnforcement(t *testing.T) {
-	// Setup test environment
+	users_testing.CleanupPlans()
+
 	router := projects_testing.CreateTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -161,7 +163,8 @@ func Test_EnforceLogRetention_WhenMaxLogsLifeDaysIsZero_NoRetentionEnforcement(t
 }
 
 func Test_EnforceLogRetention_WhenMaxLogsLifeDaysIsNegative_NoRetentionEnforcement(t *testing.T) {
-	// Setup test environment
+	users_testing.CleanupPlans()
+
 	router := projects_testing.CreateTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -234,13 +237,13 @@ func Test_EnforceLogRetention_WhenMaxLogsLifeDaysIsNegative_NoRetentionEnforceme
 }
 
 func Test_EnforceProjectQuotas_WithDifferentProjectsTimeQuotas_DeletesOnlyTargetProjectLogs(t *testing.T) {
-	// Setup test environment
+	users_testing.CleanupPlans()
+
 	router := projects_testing.CreateTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
 	)
 
-	// Create multiple users and projects
 	owner1 := users_testing.CreateTestUser(users_enums.UserRoleMember)
 	owner2 := users_testing.CreateTestUser(users_enums.UserRoleMember)
 	uniqueID1 := uuid.New().String()[:8]

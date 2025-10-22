@@ -18,7 +18,8 @@ import (
 )
 
 func Test_EnforceProjectQuotas_WhenLogCountExceedsMaxLogsAmount_DeletesOldestLogs(t *testing.T) {
-	// Setup test environment
+	users_testing.CleanupPlans()
+
 	router := projects_testing.CreateTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -130,7 +131,8 @@ func Test_EnforceProjectQuotas_WhenLogCountExceedsMaxLogsAmount_DeletesOldestLog
 }
 
 func Test_EnforceProjectQuotas_WhenLogCountIsWithinMaxLogsAmount_NoLogsDeleted(t *testing.T) {
-	// Setup test environment
+	users_testing.CleanupPlans()
+
 	router := projects_testing.CreateTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -227,7 +229,8 @@ func Test_EnforceProjectQuotas_WhenLogCountIsWithinMaxLogsAmount_NoLogsDeleted(t
 }
 
 func Test_EnforceProjectQuotas_WhenMaxLogsAmountIsZero_NoQuotaEnforcement(t *testing.T) {
-	// Setup test environment
+	users_testing.CleanupPlans()
+
 	router := projects_testing.CreateTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -325,13 +328,13 @@ func Test_EnforceProjectQuotas_WhenMaxLogsAmountIsZero_NoQuotaEnforcement(t *tes
 }
 
 func Test_EnforceProjectQuotas_WithDifferentProjectsCountQuotas_DeletesOnlyTargetProjectLogs(t *testing.T) {
-	// Setup test environment
+	users_testing.CleanupPlans()
+
 	router := projects_testing.CreateTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
 	)
 
-	// Create multiple users and projects
 	owner1 := users_testing.CreateTestUser(users_enums.UserRoleMember)
 	owner2 := users_testing.CreateTestUser(users_enums.UserRoleMember)
 	uniqueID1 := uuid.New().String()[:8]

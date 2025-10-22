@@ -20,7 +20,8 @@ import (
 )
 
 func Test_EnforceProjectQuotas_WhenStorageSizeExceedsMaxLogsSizeMB_DeletesOldestLogs(t *testing.T) {
-	// Setup test environment
+	users_testing.CleanupPlans()
+
 	router := projects_testing.CreateTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -134,7 +135,8 @@ func Test_EnforceProjectQuotas_WhenStorageSizeExceedsMaxLogsSizeMB_DeletesOldest
 }
 
 func Test_EnforceProjectQuotas_WhenStorageSizeIsWithinMaxLogsSizeMB_NoLogsDeleted(t *testing.T) {
-	// Setup test environment
+	users_testing.CleanupPlans()
+
 	router := projects_testing.CreateTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -240,7 +242,8 @@ func Test_EnforceProjectQuotas_WhenStorageSizeIsWithinMaxLogsSizeMB_NoLogsDelete
 }
 
 func Test_EnforceProjectQuotas_WhenMaxLogsSizeMBIsZero_NoSizeQuotaEnforcement(t *testing.T) {
-	// Setup test environment
+	users_testing.CleanupPlans()
+
 	router := projects_testing.CreateTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -350,7 +353,8 @@ func Test_EnforceProjectQuotas_WhenMaxLogsSizeMBIsZero_NoSizeQuotaEnforcement(t 
 }
 
 func Test_EnforceProjectQuotas_WhenStorageSizeExceedsQuota_DeletesToNinetyPercentOfLimit(t *testing.T) {
-	// Setup test environment
+	users_testing.CleanupPlans()
+
 	router := projects_testing.CreateTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -479,13 +483,13 @@ func Test_EnforceProjectQuotas_WhenStorageSizeExceedsQuota_DeletesToNinetyPercen
 }
 
 func Test_EnforceProjectQuotas_WithDifferentProjectsSizeQuotas_DeletesOnlyTargetProjectLogs(t *testing.T) {
-	// Setup test environment
+	users_testing.CleanupPlans()
+
 	router := projects_testing.CreateTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
 	)
 
-	// Create multiple users and projects
 	owner1 := users_testing.CreateTestUser(users_enums.UserRoleMember)
 	owner2 := users_testing.CreateTestUser(users_enums.UserRoleMember)
 	uniqueID1 := uuid.New().String()[:8]
