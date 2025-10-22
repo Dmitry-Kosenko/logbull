@@ -158,6 +158,10 @@ RUN echo '# Cluster configuration' > /opt/opensearch/config/opensearch.yml && \
     echo 'indices.query.bool.max_clause_count: 10000' >> /opt/opensearch/config/opensearch.yml && \
     echo 'indices.fielddata.cache.size: 40%' >> /opt/opensearch/config/opensearch.yml && \
     echo '' >> /opt/opensearch/config/opensearch.yml && \
+    echo '# Single-node index defaults (no replicas)' >> /opt/opensearch/config/opensearch.yml && \
+    echo 'index.number_of_shards: 1' >> /opt/opensearch/config/opensearch.yml && \
+    echo 'index.number_of_replicas: 0' >> /opt/opensearch/config/opensearch.yml && \
+    echo '' >> /opt/opensearch/config/opensearch.yml && \
     echo '# Thread pool configuration' >> /opt/opensearch/config/opensearch.yml && \
     echo 'thread_pool.write.queue_size: 1000' >> /opt/opensearch/config/opensearch.yml && \
     echo 'thread_pool.search.queue_size: 1000' >> /opt/opensearch/config/opensearch.yml && \
@@ -365,19 +369,6 @@ for i in {1..120}; do
     echo "Waiting for OpenSearch... (\$i/120)"
     sleep 2
 done
-
-# Configure OpenSearch for single-node operation (no replicas)
-echo "Configuring OpenSearch for single-node operation..."
-curl -X PUT "http://127.0.0.1:9200/_template/single_node_template" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "index_patterns": ["*"],
-    "settings": {
-      "number_of_shards": 1,
-      "number_of_replicas": 0
-    }
-  }' || echo "Warning: Failed to set OpenSearch template, continuing anyway..."
-echo "OpenSearch single-node configuration applied"
 
 # Start the main application
 echo "Starting Log Bull application..."
