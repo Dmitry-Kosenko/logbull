@@ -206,7 +206,7 @@ export const QueryResultsComponent = ({
 
             return (
               <div
-                className="flex text-xs break-all"
+                className="flex !font-mono text-xs break-all"
                 key={key}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -226,9 +226,9 @@ export const QueryResultsComponent = ({
                   }}
                 >
                   <div className="cursor-pointer rounded px-1 hover:bg-emerald-200">
-                    <span className="font-medium text-gray-700">{key}:</span>{' '}
+                    <span className="!font-mono font-medium text-gray-700">{key}:</span>{' '}
                     <span
-                      className={`font-mono text-gray-600 ${
+                      className={`!font-mono text-gray-600 ${
                         isJson || formatted.includes(' ') ? 'whitespace-pre-wrap' : ''
                       }`}
                     >
@@ -241,7 +241,7 @@ export const QueryResultsComponent = ({
           })
         ) : (
           <div className="text-xs">
-            <span className="font-mono break-all text-gray-600">{displayText}</span>
+            <span className="!font-mono break-all text-gray-600">{displayText}</span>
             {isTruncated && (
               <span className="ml-1 cursor-pointer text-emerald-600 hover:text-emerald-700">
                 (expand)
@@ -361,25 +361,27 @@ export const QueryResultsComponent = ({
               return (
                 <div
                   key={log.id}
-                  className="flex cursor-pointer items-start gap-2 border-b border-gray-100 py-1 text-xs hover:bg-gray-50"
+                  className="flex cursor-pointer items-start gap-2 border-b border-gray-100 py-1 !font-mono text-xs hover:bg-gray-50"
                   onClick={() => toggleRowExpansion(log.id)}
                 >
                   <div
                     style={{ width: '150px', lineHeight: 1.1 }}
-                    className="font-mono text-xs text-gray-600"
+                    className="text-xs text-gray-600"
                   >
-                    <div style={{ fontSize: '12px' }}>
+                    <div className="!font-mono" style={{ fontSize: '12px' }}>
                       {dayjs(log.timestamp).format(timeFormat.format)}
                     </div>
-                    <div className="text-gray-400" style={{ fontSize: '10px' }}>
+                    <div className="!font-mono text-gray-400" style={{ fontSize: '10px' }}>
                       {dayjs(log.timestamp).fromNow()}
                     </div>
                   </div>
 
-                  <div style={{ width: '85px' }}>{renderLogLevel(log.level)}</div>
+                  <div className="!font-mono" style={{ width: '85px' }}>
+                    {renderLogLevel(log.level)}
+                  </div>
 
                   <div
-                    className={`${showFields ? 'flex-1' : 'flex-[2]'} font-mono text-xs break-all text-gray-900 ${
+                    className={`${showFields ? 'flex-1' : 'flex-[2]'} !font-mono text-xs break-all text-gray-900 ${
                       isExpanded && displayMessage.includes(' ') ? 'whitespace-pre-wrap' : ''
                     }`}
                   >

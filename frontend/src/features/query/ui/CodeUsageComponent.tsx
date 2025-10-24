@@ -1248,7 +1248,7 @@ export function CodeUsageComponent({
             </button>
 
             {/* Syntax highlighted code */}
-            <div className="m-0 rounded-lg p-6 pr-20 text-sm leading-6">
+            <div className="m-0 rounded-lg p-6 pr-20 !font-mono text-sm leading-6">
               <SyntaxHighlighter
                 language={
                   hasMultipleInstallMethods

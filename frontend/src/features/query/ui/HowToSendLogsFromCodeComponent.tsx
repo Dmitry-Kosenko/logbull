@@ -120,7 +120,7 @@ export const HowToSendLogsFromCodeComponent = ({
                 <span className="text-xs font-medium text-gray-600">LogBull URL:</span>
               </div>
               <div className="flex items-center justify-between rounded border border-gray-200 bg-gray-100 px-3 py-1.5">
-                <span className="truncate font-mono text-xs text-gray-800">{baseUrl}</span>
+                <span className="truncate !font-mono text-xs text-gray-800">{baseUrl}</span>
                 <Button
                   type="text"
                   size="small"
@@ -137,7 +137,7 @@ export const HowToSendLogsFromCodeComponent = ({
                 <span className="text-xs font-medium text-gray-600">Project ID:</span>
               </div>
               <div className="flex items-center justify-between rounded border border-gray-200 bg-gray-100 px-3 py-1.5">
-                <span className="truncate font-mono text-xs text-gray-800">{projectId}</span>
+                <span className="truncate !font-mono text-xs text-gray-800">{projectId}</span>
                 <Button
                   type="text"
                   size="small"

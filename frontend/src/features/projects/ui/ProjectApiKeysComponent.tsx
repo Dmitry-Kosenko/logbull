@@ -288,7 +288,7 @@ export function ProjectApiKeysComponent({ contentHeight, projectResponse, user }
       key: 'tokenPrefix',
       width: 150,
       render: (tokenPrefix: string) => (
-        <code className="rounded bg-gray-100 px-2 py-1 font-mono text-sm text-gray-700">
+        <code className="rounded bg-gray-100 px-2 py-1 !font-mono text-sm text-gray-700">
           {tokenPrefix}...
         </code>
       ),
@@ -545,7 +545,7 @@ export function ProjectApiKeysComponent({ contentHeight, projectResponse, user }
                     <div className="mb-2 font-medium text-gray-900">Full API token:</div>
                     <div className="rounded-lg border-2 border-emerald-200 bg-emerald-50 p-4">
                       <div className="flex items-center justify-between">
-                        <code className="font-mono text-sm break-all text-emerald-800 select-all">
+                        <code className="!font-mono text-sm break-all text-emerald-800 select-all">
                           {createdApiKey.token}
                         </code>
                         <Button

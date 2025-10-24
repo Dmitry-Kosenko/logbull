@@ -250,7 +250,7 @@ export function SettingsComponent({ contentHeight }: Props) {
             <h2 className="mb-3 text-xl font-bold">Health-check</h2>
 
             <div className="group relative">
-              <div className="flex items-center rounded-md border border-gray-300 bg-gray-50 px-3 py-2 font-mono text-sm text-gray-700">
+              <div className="flex items-center rounded-md border border-gray-300 bg-gray-50 px-3 py-2 !font-mono text-sm text-gray-700">
                 <code
                   className="flex-1 cursor-pointer transition-colors select-all hover:text-emerald-600"
                   onClick={() => {

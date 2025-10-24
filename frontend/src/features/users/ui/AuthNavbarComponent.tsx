@@ -2,7 +2,7 @@ import GitHubButton from 'react-github-btn';
 
 export function AuthNavbarComponent() {
   return (
-    <div className="m-3 flex h-[65px] items-center p-3">
+    <div className="m-3 flex h-[65px] items-center justify-center p-3 sm:justify-start">
       <div className="flex items-center gap-3 hover:opacity-80">
         <a href="https://logbull.com" target="_blank" rel="noreferrer">
           <img className="h-[35px] w-[35px]" src="/logo.svg" />
@@ -15,7 +15,7 @@ export function AuthNavbarComponent() {
         </div>
       </div>
 
-      <div className="mr-3 ml-auto flex items-center gap-5">
+      <div className="mr-3 ml-auto hidden items-center gap-5 sm:flex">
         <a
           className="!text-black hover:opacity-80"
           href="https://t.me/logbull_community"
