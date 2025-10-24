@@ -7,6 +7,6 @@ export interface UserProfile {
   name: string;
   role: UserRole;
   isActive: boolean;
-  createdAt: string;
+  createdAt: Date;
   plan?: UserPlan;
 }

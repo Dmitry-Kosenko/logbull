@@ -12,8 +12,10 @@ import {
   type QueryableField,
   queryApi,
 } from '../../../entity/query';
+import type { UserProfile } from '../../../entity/users/model/UserProfile';
 import { FloatingTopButtonComponent } from './FloatingTopButtonComponent';
 import { HowToSendLogsFromCodeComponent } from './HowToSendLogsFromCodeComponent';
+import { OnboardingTooltipComponent } from './OnboardingTooltipComponent';
 import { QueryBuilderComponent } from './QueryBuilderComponent';
 import { QueryResultsComponent } from './QueryResultsComponent';
 import { type TimeRange, TimeRangePickerComponent } from './TimeRangePickerComponent';
@@ -21,6 +23,7 @@ import { type TimeRange, TimeRangePickerComponent } from './TimeRangePickerCompo
 interface Props {
   projectId: string;
   contentHeight: number;
+  user?: UserProfile;
 }
 
 /**
@@ -57,7 +60,11 @@ interface SavedQuery {
   sortOrder: 'asc' | 'desc';
 }
 
-export const QueryComponentComponent = ({ projectId, contentHeight }: Props): React.JSX.Element => {
+export const QueryComponentComponent = ({
+  projectId,
+  contentHeight,
+  user,
+}: Props): React.JSX.Element => {
   // States
   const [isShowHowToSendLogsFromCode, setIsShowHowToSendLogsFromCode] = useState(false);
   const [queryableFields, setQueryableFields] = useState<QueryableField[]>([]);
@@ -73,6 +80,7 @@ export const QueryComponentComponent = ({ projectId, contentHeight }: Props): Re
   const [hasSearched, setHasSearched] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [project, setProject] = useState<Project | undefined>();
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Refs
   const timeRangeRef = useRef<() => TimeRange | null>(null);
@@ -82,9 +90,35 @@ export const QueryComponentComponent = ({ projectId, contentHeight }: Props): Re
   } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const queryBuilderRef = useRef<HTMLDivElement>(null);
+  const howToSendLogsButtonRef = useRef<HTMLDivElement>(null);
 
   // Functions
   const { message } = App.useApp();
+
+  // Onboarding functions
+  const isUserNewlyRegistered = (user: UserProfile): boolean => {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    return new Date(user.createdAt) > fiveMinutesAgo;
+  };
+
+  const shouldShowOnboarding = (): boolean => {
+    if (!user) return false;
+    if (!isUserNewlyRegistered(user)) return false;
+    const onboardingShown = localStorage.getItem('logbull-onboarding-shown');
+    return !onboardingShown;
+  };
+
+  const handleDismissOnboarding = () => {
+    localStorage.setItem('logbull-onboarding-shown', 'true');
+    setShowOnboarding(false);
+  };
+
+  const handleHowToSendLogsClick = () => {
+    if (showOnboarding) {
+      handleDismissOnboarding();
+    }
+    setIsShowHowToSendLogsFromCode(!isShowHowToSendLogsFromCode);
+  };
 
   // Query persistence functions
   const getSavedQueryKey = (projectId: string): string => {
@@ -415,6 +449,19 @@ export const QueryComponentComponent = ({ projectId, contentHeight }: Props): Re
     }
   }, [currentQuery, sortOrder, projectId, isInitialLoad]);
 
+  // Trigger onboarding tooltip after 3 seconds for new users
+  useEffect(() => {
+    if (!isInitialLoad && user) {
+      const timer = setTimeout(() => {
+        if (shouldShowOnboarding()) {
+          setShowOnboarding(true);
+        }
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isInitialLoad, user]);
+
   return (
     <div
       ref={containerRef}
@@ -465,10 +512,10 @@ export const QueryComponentComponent = ({ projectId, contentHeight }: Props): Re
             </div>
           </div>
 
-          <div className="ml-auto">
+          <div className="ml-auto" ref={howToSendLogsButtonRef}>
             <Button
               type="primary"
-              onClick={() => setIsShowHowToSendLogsFromCode(!isShowHowToSendLogsFromCode)}
+              onClick={handleHowToSendLogsClick}
               loading={isExecuting}
               ghost
               className="border-emerald-600 bg-emerald-600 hover:border-emerald-700 hover:bg-emerald-700"
@@ -536,6 +583,8 @@ export const QueryComponentComponent = ({ projectId, contentHeight }: Props): Re
           onClose={() => setIsShowHowToSendLogsFromCode(false)}
         />
       )}
+
+      <OnboardingTooltipComponent targetRef={howToSendLogsButtonRef} show={showOnboarding} />
     </div>
   );
 };

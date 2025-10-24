@@ -328,6 +328,7 @@ export const MainScreenComponent = () => {
                 <QueryComponentComponent
                   projectId={selectedProject.id}
                   contentHeight={contentHeight}
+                  user={user}
                 />
               )}
             </>
