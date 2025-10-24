@@ -196,6 +196,7 @@ export const MainScreenComponent = () => {
                 onClick: () => setSelectedTab('search'),
                 isAdminOnly: false,
                 marginTop: '0px',
+                isVisible: true,
               },
               {
                 text: 'Settings',
@@ -205,6 +206,7 @@ export const MainScreenComponent = () => {
                 onClick: () => setSelectedTab('settings'),
                 isAdminOnly: false,
                 marginTop: '0px',
+                isVisible: !!selectedProject,
               },
               {
                 text: 'Members',
@@ -214,6 +216,7 @@ export const MainScreenComponent = () => {
                 onClick: () => setSelectedTab('members'),
                 isAdminOnly: false,
                 marginTop: '0px',
+                isVisible: !!selectedProject,
               },
               {
                 text: 'API Keys',
@@ -223,6 +226,7 @@ export const MainScreenComponent = () => {
                 onClick: () => setSelectedTab('api-keys'),
                 isAdminOnly: false,
                 marginTop: '0px',
+                isVisible: !!selectedProject,
               },
               {
                 text: 'Profile',
@@ -232,6 +236,7 @@ export const MainScreenComponent = () => {
                 onClick: () => setSelectedTab('profile'),
                 isAdminOnly: false,
                 marginTop: '0px',
+                isVisible: true,
               },
               {
                 text: 'LogBull settings',
@@ -241,6 +246,7 @@ export const MainScreenComponent = () => {
                 onClick: () => setSelectedTab('logbull-settings'),
                 isAdminOnly: true,
                 marginTop: '25px',
+                isVisible: true,
               },
               {
                 text: 'Users',
@@ -250,9 +256,11 @@ export const MainScreenComponent = () => {
                 onClick: () => setSelectedTab('users'),
                 isAdminOnly: true,
                 marginTop: '0px',
+                isVisible: true,
               },
             ]
               .filter((tab) => !tab.isAdminOnly || user?.role === UserRole.ADMIN)
+              .filter((tab) => tab.isVisible)
               .map((tab) => (
                 <div key={tab.text} className="flex justify-center">
                   <div
