@@ -629,7 +629,7 @@ func (r *LogCoreRepository) deleteByQuery(queryBody map[string]any, routing *uui
 	params = append(params,
 		"conflicts=proceed",
 		"wait_for_completion=true",
-		"refresh=true",
+		"refresh=false",
 		"ignore_unavailable=true",
 		"allow_no_indices=true",
 		"expand_wildcards=open,hidden",
