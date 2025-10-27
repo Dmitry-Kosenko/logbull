@@ -3,6 +3,7 @@ import { Spin } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 
+import { getOAuthRedirectUri } from '../constants';
 import { userApi } from '../entity/users';
 
 export function OAuthCallbackPage() {
@@ -25,11 +26,13 @@ export function OAuthCallbackPage() {
         return;
       }
 
+      const redirectUri = getOAuthRedirectUri();
+
       try {
         if (state === 'github') {
-          await userApi.handleGitHubOAuth({ code });
+          await userApi.handleGitHubOAuth({ code, redirectUri });
         } else if (state === 'google') {
-          await userApi.handleGoogleOAuth({ code });
+          await userApi.handleGoogleOAuth({ code, redirectUri });
         } else {
           setError('Invalid OAuth provider');
           return;

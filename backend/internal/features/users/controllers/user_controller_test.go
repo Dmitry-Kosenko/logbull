@@ -678,7 +678,12 @@ func Test_GitHubOAuth_WithValidCode_ReturnsToken(t *testing.T) {
 	}
 
 	userService := users_services.GetUserService()
-	response, err := userService.HandleGitHubOAuthWithMockEndpoint("test-code", endpoint, mockServer.URL+"/user")
+	response, err := userService.HandleGitHubOAuthWithMockEndpoint(
+		"test-code",
+		"http://localhost:3000/auth/callback",
+		endpoint,
+		mockServer.URL+"/user",
+	)
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, response.Token)
@@ -728,7 +733,12 @@ func Test_GitHubOAuth_WithExistingEmail_LinksAccount(t *testing.T) {
 	}
 
 	userService := users_services.GetUserService()
-	response, err := userService.HandleGitHubOAuthWithMockEndpoint("test-code", endpoint, mockServer.URL+"/user")
+	response, err := userService.HandleGitHubOAuthWithMockEndpoint(
+		"test-code",
+		"http://localhost:3000/auth/callback",
+		endpoint,
+		mockServer.URL+"/user",
+	)
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, response.Token)
@@ -784,12 +794,75 @@ func Test_GitHubOAuth_WithInvitedUser_ActivatesUser(t *testing.T) {
 	}
 
 	userService := users_services.GetUserService()
-	response, err := userService.HandleGitHubOAuthWithMockEndpoint("test-code", endpoint, mockServer.URL+"/user")
+	response, err := userService.HandleGitHubOAuthWithMockEndpoint(
+		"test-code",
+		"http://localhost:3000/auth/callback",
+		endpoint,
+		mockServer.URL+"/user",
+	)
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, response.Token)
 	assert.Equal(t, email, response.Email)
 	assert.False(t, response.IsNewUser)
+}
+
+func Test_GitHubOAuth_WithNoPublicEmail_FetchesFromEmailsEndpoint(t *testing.T) {
+	testID := uuid.New().String()[:8]
+	testEmail := "private-email-" + testID + "@example.com"
+	testOAuthID := int64(uuid.New().ID())
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/login/oauth/access_token" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"access_token": "mock-access-token",
+				"token_type":   "bearer",
+			})
+			return
+		}
+		if r.URL.Path == "/user" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id":    testOAuthID,
+				"email": "",
+				"name":  "GitHub Test User",
+				"login": "githubtest",
+			})
+			return
+		}
+		if r.URL.Path == "/user/emails" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode([]map[string]any{
+				{
+					"email":    testEmail,
+					"primary":  true,
+					"verified": true,
+				},
+			})
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer mockServer.Close()
+
+	endpoint := oauth2.Endpoint{
+		AuthURL:  mockServer.URL + "/login/oauth/authorize",
+		TokenURL: mockServer.URL + "/login/oauth/access_token",
+	}
+
+	userService := users_services.GetUserService()
+	response, err := userService.HandleGitHubOAuthWithMockEndpoint(
+		"test-code",
+		"http://localhost:3000/auth/callback",
+		endpoint,
+		mockServer.URL+"/user",
+	)
+
+	assert.NoError(t, err)
+	assert.NotEmpty(t, response.Token)
+	assert.Equal(t, testEmail, response.Email)
+	assert.True(t, response.IsNewUser)
 }
 
 func Test_GitHubOAuth_WhenRegistrationDisabled_ReturnsBadRequest(t *testing.T) {
@@ -825,7 +898,12 @@ func Test_GitHubOAuth_WhenRegistrationDisabled_ReturnsBadRequest(t *testing.T) {
 	}
 
 	userService := users_services.GetUserService()
-	response, err := userService.HandleGitHubOAuthWithMockEndpoint("test-code", endpoint, mockServer.URL+"/user")
+	response, err := userService.HandleGitHubOAuthWithMockEndpoint(
+		"test-code",
+		"http://localhost:3000/auth/callback",
+		endpoint,
+		mockServer.URL+"/user",
+	)
 
 	assert.Error(t, err)
 	assert.Nil(t, response)
@@ -865,7 +943,12 @@ func Test_GoogleOAuth_WithValidCode_ReturnsToken(t *testing.T) {
 	}
 
 	userService := users_services.GetUserService()
-	response, err := userService.HandleGoogleOAuthWithMockEndpoint("test-code", endpoint, mockServer.URL+"/userinfo")
+	response, err := userService.HandleGoogleOAuthWithMockEndpoint(
+		"test-code",
+		"http://localhost:3000/auth/callback",
+		endpoint,
+		mockServer.URL+"/userinfo",
+	)
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, response.Token)
@@ -914,7 +997,12 @@ func Test_GoogleOAuth_WithExistingEmail_LinksAccount(t *testing.T) {
 	}
 
 	userService := users_services.GetUserService()
-	response, err := userService.HandleGoogleOAuthWithMockEndpoint("test-code", endpoint, mockServer.URL+"/userinfo")
+	response, err := userService.HandleGoogleOAuthWithMockEndpoint(
+		"test-code",
+		"http://localhost:3000/auth/callback",
+		endpoint,
+		mockServer.URL+"/userinfo",
+	)
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, response.Token)
@@ -969,7 +1057,12 @@ func Test_GoogleOAuth_WithInvitedUser_ActivatesUser(t *testing.T) {
 	}
 
 	userService := users_services.GetUserService()
-	response, err := userService.HandleGoogleOAuthWithMockEndpoint("test-code", endpoint, mockServer.URL+"/userinfo")
+	response, err := userService.HandleGoogleOAuthWithMockEndpoint(
+		"test-code",
+		"http://localhost:3000/auth/callback",
+		endpoint,
+		mockServer.URL+"/userinfo",
+	)
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, response.Token)

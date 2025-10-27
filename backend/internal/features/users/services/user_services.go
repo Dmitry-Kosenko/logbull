@@ -465,12 +465,12 @@ func (s *UserService) OnBeforePlanDeletion(planID uuid.UUID) error {
 	return nil
 }
 
-func (s *UserService) HandleGitHubOAuth(code string) (*users_dto.OAuthCallbackResponseDTO, error) {
-	return s.handleGitHubOAuthWithEndpoint(code, github.Endpoint, "https://api.github.com/user")
+func (s *UserService) HandleGitHubOAuth(code, redirectUri string) (*users_dto.OAuthCallbackResponseDTO, error) {
+	return s.handleGitHubOAuthWithEndpoint(code, redirectUri, github.Endpoint, "https://api.github.com/user")
 }
 
 func (s *UserService) handleGitHubOAuthWithEndpoint(
-	code string,
+	code, redirectUri string,
 	endpoint oauth2.Endpoint,
 	userAPIURL string,
 ) (*users_dto.OAuthCallbackResponseDTO, error) {
@@ -479,6 +479,7 @@ func (s *UserService) handleGitHubOAuthWithEndpoint(
 	oauthConfig := &oauth2.Config{
 		ClientID:     env.GitHubClientID,
 		ClientSecret: env.GitHubClientSecret,
+		RedirectURL:  redirectUri,
 		Endpoint:     endpoint,
 		Scopes:       []string{"user:email"},
 	}
@@ -517,8 +518,12 @@ func (s *UserService) handleGitHubOAuthWithEndpoint(
 		return nil, fmt.Errorf("failed to parse user info: %w", err)
 	}
 
-	if githubUser.Email == "" {
-		return nil, errors.New("github account has no public email")
+	email := githubUser.Email
+	if email == "" {
+		email, err = s.fetchGitHubPrimaryEmail(client, userAPIURL)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	name := githubUser.Name
@@ -527,15 +532,20 @@ func (s *UserService) handleGitHubOAuthWithEndpoint(
 	}
 
 	oauthID := fmt.Sprintf("%d", githubUser.ID)
-	return s.getOrCreateUserFromOAuth(oauthID, githubUser.Email, name, "github")
+	return s.getOrCreateUserFromOAuth(oauthID, email, name, "github")
 }
 
-func (s *UserService) HandleGoogleOAuth(code string) (*users_dto.OAuthCallbackResponseDTO, error) {
-	return s.handleGoogleOAuthWithEndpoint(code, google.Endpoint, "https://www.googleapis.com/oauth2/v2/userinfo")
+func (s *UserService) HandleGoogleOAuth(code, redirectUri string) (*users_dto.OAuthCallbackResponseDTO, error) {
+	return s.handleGoogleOAuthWithEndpoint(
+		code,
+		redirectUri,
+		google.Endpoint,
+		"https://www.googleapis.com/oauth2/v2/userinfo",
+	)
 }
 
 func (s *UserService) handleGoogleOAuthWithEndpoint(
-	code string,
+	code, redirectUri string,
 	endpoint oauth2.Endpoint,
 	userAPIURL string,
 ) (*users_dto.OAuthCallbackResponseDTO, error) {
@@ -544,6 +554,7 @@ func (s *UserService) handleGoogleOAuthWithEndpoint(
 	oauthConfig := &oauth2.Config{
 		ClientID:     env.GoogleClientID,
 		ClientSecret: env.GoogleClientSecret,
+		RedirectURL:  redirectUri,
 		Endpoint:     endpoint,
 		Scopes: []string{
 			"https://www.googleapis.com/auth/userinfo.email",
@@ -749,4 +760,57 @@ func (s *UserService) getOrCreateUserFromOAuth(
 		Token:     tokenResponse.Token,
 		IsNewUser: true,
 	}, nil
+}
+
+func (s *UserService) fetchGitHubPrimaryEmail(client *http.Client, userAPIURL string) (string, error) {
+	emailsURL := "https://api.github.com/user/emails"
+	if userAPIURL != "https://api.github.com/user" {
+		baseURL := userAPIURL[:len(userAPIURL)-len("/user")]
+		emailsURL = baseURL + "/user/emails"
+	}
+
+	resp, err := client.Get(emailsURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to get user emails: %w", err)
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", errors.New("github account has no accessible email")
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read emails response: %w", err)
+	}
+
+	var emails []struct {
+		Email    string `json:"email"`
+		Primary  bool   `json:"primary"`
+		Verified bool   `json:"verified"`
+	}
+
+	if err := json.Unmarshal(body, &emails); err != nil {
+		return "", fmt.Errorf("failed to parse emails: %w", err)
+	}
+
+	for _, email := range emails {
+		if email.Primary && email.Verified {
+			return email.Email, nil
+		}
+	}
+
+	for _, email := range emails {
+		if email.Verified {
+			return email.Email, nil
+		}
+	}
+
+	if len(emails) > 0 {
+		return emails[0].Email, nil
+	}
+
+	return "", errors.New("github account has no accessible email")
 }

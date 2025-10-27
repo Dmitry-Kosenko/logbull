@@ -114,7 +114,8 @@ type CountByPlanResponseDTO struct {
 }
 
 type OAuthCallbackRequestDTO struct {
-	Code string `json:"code" binding:"required"`
+	Code        string `json:"code"        binding:"required"`
+	RedirectUri string `json:"redirectUri" binding:"required"`
 }
 
 type OAuthCallbackResponseDTO struct {

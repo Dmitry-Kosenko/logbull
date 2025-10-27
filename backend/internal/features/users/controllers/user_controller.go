@@ -294,7 +294,7 @@ func (c *UserController) HandleGitHubOAuth(ctx *gin.Context) {
 		return
 	}
 
-	response, err := c.userService.HandleGitHubOAuth(request.Code)
+	response, err := c.userService.HandleGitHubOAuth(request.Code, request.RedirectUri)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -327,7 +327,7 @@ func (c *UserController) HandleGoogleOAuth(ctx *gin.Context) {
 		return
 	}
 
-	response, err := c.userService.HandleGoogleOAuth(request.Code)
+	response, err := c.userService.HandleGoogleOAuth(request.Code, request.RedirectUri)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

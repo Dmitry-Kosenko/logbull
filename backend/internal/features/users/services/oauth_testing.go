@@ -7,17 +7,17 @@ import (
 )
 
 func (s *UserService) HandleGitHubOAuthWithMockEndpoint(
-	code string,
+	code, redirectUri string,
 	endpoint oauth2.Endpoint,
 	userAPIURL string,
 ) (*users_dto.OAuthCallbackResponseDTO, error) {
-	return s.handleGitHubOAuthWithEndpoint(code, endpoint, userAPIURL)
+	return s.handleGitHubOAuthWithEndpoint(code, redirectUri, endpoint, userAPIURL)
 }
 
 func (s *UserService) HandleGoogleOAuthWithMockEndpoint(
-	code string,
+	code, redirectUri string,
 	endpoint oauth2.Endpoint,
 	userAPIURL string,
 ) (*users_dto.OAuthCallbackResponseDTO, error) {
-	return s.handleGoogleOAuthWithEndpoint(code, endpoint, userAPIURL)
+	return s.handleGoogleOAuthWithEndpoint(code, redirectUri, endpoint, userAPIURL)
 }
