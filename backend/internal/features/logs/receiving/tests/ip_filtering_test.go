@@ -20,6 +20,7 @@ import (
 )
 
 func Test_SubmitLogs_WhenIPFilterEnabled_WithAllowedIP_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupIPTest("Allowed IP Test", []string{"192.168.1.100", "10.0.0.5"})
 
 	response := submitTestLogsWithIP(
@@ -37,6 +38,7 @@ func Test_SubmitLogs_WhenIPFilterEnabled_WithAllowedIP_LogsAccepted(t *testing.T
 }
 
 func Test_SubmitLogs_WhenIPFilterEnabled_WithDisallowedIP_ReturnsForbidden(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupIPTest("Disallowed IP Test", []string{"192.168.1.100"})
 
 	resp := submitTestLogsWithIPExpectingError(
@@ -53,6 +55,7 @@ func Test_SubmitLogs_WhenIPFilterEnabled_WithDisallowedIP_ReturnsForbidden(t *te
 }
 
 func Test_SubmitLogs_WhenIPFilterEnabled_WithCIDRRange_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupIPTest("CIDR Range Test", []string{"192.168.1.0/24", "10.0.0.0/8"})
 
 	// Test IP within first CIDR range
@@ -91,6 +94,7 @@ func Test_SubmitLogs_WhenIPFilterEnabled_WithCIDRRange_LogsAccepted(t *testing.T
 }
 
 func Test_SubmitLogs_WhenIPFilterEnabled_WithXForwardedFor_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupIPTest("X-Forwarded-For Test", []string{"203.0.113.45"})
 
 	response := submitTestLogsWithXForwardedFor(
@@ -108,6 +112,7 @@ func Test_SubmitLogs_WhenIPFilterEnabled_WithXForwardedFor_LogsAccepted(t *testi
 }
 
 func Test_SubmitLogs_WhenIPFilterEnabled_WithXRealIP_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupIPTest("X-Real-IP Test", []string{"198.51.100.23"})
 
 	response := submitTestLogsWithXRealIP(
@@ -125,6 +130,7 @@ func Test_SubmitLogs_WhenIPFilterEnabled_WithXRealIP_LogsAccepted(t *testing.T) 
 }
 
 func Test_SubmitLogs_WhenIPFilterEnabled_WithXForwardedForDisallowed_ReturnsForbidden(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupIPTest("X-Forwarded-For Disallowed Test", []string{"203.0.113.45"})
 
 	resp := submitTestLogsWithXForwardedForExpectingError(
@@ -141,6 +147,7 @@ func Test_SubmitLogs_WhenIPFilterEnabled_WithXForwardedForDisallowed_ReturnsForb
 }
 
 func Test_SubmitLogs_WhenIPFilterEnabled_WithXRealIPDisallowed_ReturnsForbidden(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupIPTest("X-Real-IP Disallowed Test", []string{"198.51.100.23"})
 
 	resp := submitTestLogsWithXRealIPExpectingError(
@@ -157,6 +164,7 @@ func Test_SubmitLogs_WhenIPFilterEnabled_WithXRealIPDisallowed_ReturnsForbidden(
 }
 
 func Test_SubmitLogs_WhenIPFilterDisabled_WithAnyIP_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupIPTest("IP Filter Disabled Test", nil)
 
 	// Test with random IP when filtering is disabled
@@ -175,6 +183,7 @@ func Test_SubmitLogs_WhenIPFilterDisabled_WithAnyIP_LogsAccepted(t *testing.T) {
 }
 
 func Test_SubmitLogs_WhenIPFilterEnabled_WithMultipleAllowedIPs_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupIPTest("Multiple IPs Test", []string{"192.168.1.100", "10.0.0.5", "203.0.113.45"})
 
 	// Test first allowed IP
@@ -212,6 +221,7 @@ func Test_SubmitLogs_WhenIPFilterEnabled_WithMultipleAllowedIPs_LogsAccepted(t *
 }
 
 func Test_SubmitLogs_WhenIPFilterEnabled_WithMixedIPsAndCIDR_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupIPTest("Mixed IPs and CIDR Test", []string{"192.168.1.100", "10.0.0.0/24"})
 
 	// Test specific IP

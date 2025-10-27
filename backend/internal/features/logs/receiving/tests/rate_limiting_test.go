@@ -23,6 +23,7 @@ import (
 )
 
 func Test_SubmitLogs_WithinRateLimit_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupRateLimitTest("Within Rate Limit Test", 10) // 10 logs per second
 
 	// Submit 5 logs (well within limit)
@@ -44,6 +45,7 @@ func Test_SubmitLogs_WithinRateLimit_LogsAccepted(t *testing.T) {
 }
 
 func Test_SubmitLogs_ExceedingRateLimit_ReturnsTooManyRequests(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupRateLimitTest("Exceeding Rate Limit Test", 2) // Very low limit: 2 per second
 
 	// Submit logs rapidly to exceed the rate limit
@@ -79,6 +81,7 @@ func Test_SubmitLogs_ExceedingRateLimit_ReturnsTooManyRequests(t *testing.T) {
 }
 
 func Test_SubmitLogs_AfterRateLimitReset_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupRateLimitTest("Rate Limit Reset Test", 3) // 3 logs per second
 
 	// First, exhaust the rate limit
@@ -122,6 +125,7 @@ func Test_SubmitLogs_AfterRateLimitReset_LogsAccepted(t *testing.T) {
 }
 
 func Test_SubmitLogs_WithZeroRateLimit_UnlimitedAccess(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupRateLimitTest("Zero Rate Limit Test", 0) // 0 = unlimited
 
 	// Submit many logs rapidly - should all be accepted with unlimited rate
@@ -146,6 +150,7 @@ func Test_SubmitLogs_WithZeroRateLimit_UnlimitedAccess(t *testing.T) {
 }
 
 func Test_SubmitLogs_MultipleSmallBatches_EnforcesRateLimit(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupRateLimitTest("Multiple Small Batches", 3) // 3 logs per second, burst = 15
 
 	successfulLogs := 0
@@ -174,6 +179,7 @@ func Test_SubmitLogs_MultipleSmallBatches_EnforcesRateLimit(t *testing.T) {
 }
 
 func Test_SubmitLogs_SingleBatchPartiallyRateLimited_AcceptsAvailableLogsOnly(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupRateLimitTest("Single Batch Partial Rate Limit", 10) // 10 logs per second, burst = 50
 
 	// First, exhaust most tokens - leave only 7 tokens available
@@ -210,6 +216,7 @@ func Test_SubmitLogs_SingleBatchPartiallyRateLimited_AcceptsAvailableLogsOnly(t 
 }
 
 func Test_SubmitLogs_ZeroTokensAvailable_RejectsAllLogsInBatch(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupRateLimitTest("Zero Tokens Available", 5) // 5 logs per second, burst = 25
 
 	// Exhaust all tokens completely (send 25 logs)
@@ -243,6 +250,7 @@ func Test_SubmitLogs_ZeroTokensAvailable_RejectsAllLogsInBatch(t *testing.T) {
 }
 
 func Test_SubmitLogs_BatchExceedsLPSLimit_OnlyLPSLogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupRateLimitTest("Batch Exceeds LPS Limit", 10) // 10 logs per second
 
 	// Submit 15 logs in a single batch when LPS is 10
@@ -269,6 +277,7 @@ func Test_SubmitLogs_BatchExceedsLPSLimit_OnlyLPSLogsAccepted(t *testing.T) {
 }
 
 func Test_SubmitLogs_BatchExceedsLPSLimit_MultipleScenarios(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupRateLimitTest("Multiple LPS Scenarios", 5) // 5 logs per second
 
 	// Scenario 1: Submit 8 logs, should accept 5 (LPS limit)

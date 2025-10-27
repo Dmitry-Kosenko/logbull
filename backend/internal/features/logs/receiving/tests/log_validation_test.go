@@ -23,6 +23,7 @@ import (
 )
 
 func Test_SubmitLogs_WithValidLogLevels_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupValidationTest("Valid Log Levels Test")
 
 	validLevels := []logs_core.LogLevel{
@@ -46,6 +47,7 @@ func Test_SubmitLogs_WithValidLogLevels_LogsAccepted(t *testing.T) {
 }
 
 func Test_SubmitLogs_WithInvalidLogLevel_LogRejected(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupValidationTest("Invalid Log Level Test")
 
 	invalidLogItem := logs_receiving.LogItemRequestDTO{
@@ -70,6 +72,7 @@ func Test_SubmitLogs_WithInvalidLogLevel_LogRejected(t *testing.T) {
 }
 
 func Test_SubmitLogs_WithEmptyMessage_LogRejected(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupValidationTest("Empty Message Test")
 
 	emptyMessageLogItem := logs_receiving.LogItemRequestDTO{
@@ -94,6 +97,7 @@ func Test_SubmitLogs_WithEmptyMessage_LogRejected(t *testing.T) {
 }
 
 func Test_SubmitLogs_WithWhitespaceMessage_LogRejected(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupValidationTest("Whitespace Message Test")
 
 	whitespaceMessages := []string{
@@ -128,6 +132,7 @@ func Test_SubmitLogs_WithWhitespaceMessage_LogRejected(t *testing.T) {
 }
 
 func Test_SubmitLogs_WithLogExceedingMaxSize_LogRejected(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupValidationTest("Log Exceeding Max Size Test")
 
 	largeMessage := strings.Repeat("A", 65*1024)
@@ -153,6 +158,7 @@ func Test_SubmitLogs_WithLogExceedingMaxSize_LogRejected(t *testing.T) {
 }
 
 func Test_SubmitLogs_WithCustomFields_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupValidationTest("Custom Fields Test")
 
 	customFieldsLogItem := logs_receiving.LogItemRequestDTO{
@@ -187,6 +193,7 @@ func Test_SubmitLogs_WithCustomFields_LogsAccepted(t *testing.T) {
 }
 
 func Test_SubmitLogs_WithFutureTimestamp_LogRejected(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupValidationTest("Future Timestamp Test")
 
 	futureTime := time.Now().UTC().Add(1 * time.Hour)

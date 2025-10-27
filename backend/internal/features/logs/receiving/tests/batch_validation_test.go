@@ -22,6 +22,8 @@ import (
 )
 
 func Test_SubmitLogs_WithMaxAllowedBatchSize_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
+
 	testData := setupBatchTest("Max Allowed Batch Size Test")
 
 	maxBatchSize := 1_000
@@ -35,6 +37,8 @@ func Test_SubmitLogs_WithMaxAllowedBatchSize_LogsAccepted(t *testing.T) {
 }
 
 func Test_SubmitLogs_ExceedingMaxBatchCount_ReturnsBadRequest(t *testing.T) {
+	users_testing.CleanupPlans()
+
 	testData := setupBatchTest("Exceeding Max Batch Count Test")
 
 	exceedingBatchSize := 1_001
@@ -52,6 +56,8 @@ func Test_SubmitLogs_ExceedingMaxBatchCount_ReturnsBadRequest(t *testing.T) {
 }
 
 func Test_SubmitLogs_ExceedingMaxBatchSizeBytes_ReturnsBadRequest(t *testing.T) {
+	users_testing.CleanupPlans()
+
 	testData := setupBatchTest("Exceeding Max Batch Size Bytes Test")
 
 	// Create logs that exceed 10MB total size
@@ -82,6 +88,8 @@ func Test_SubmitLogs_ExceedingMaxBatchSizeBytes_ReturnsBadRequest(t *testing.T) 
 }
 
 func Test_SubmitLogs_WithMixedValidInvalidLogs_PartialAcceptance(t *testing.T) {
+	users_testing.CleanupPlans()
+
 	testData := setupBatchTest("Mixed Valid Invalid Logs Test")
 
 	validLog1 := logs_receiving.LogItemRequestDTO{

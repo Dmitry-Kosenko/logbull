@@ -1,14 +1,22 @@
 package users_services
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/github"
+	"golang.org/x/oauth2/google"
 
+	"logbull/internal/config"
 	users_dto "logbull/internal/features/users/dto"
 	users_enums "logbull/internal/features/users/enums"
 	users_interfaces "logbull/internal/features/users/interfaces"
@@ -455,4 +463,290 @@ func (s *UserService) OnBeforePlanDeletion(planID uuid.UUID) error {
 	}
 
 	return nil
+}
+
+func (s *UserService) HandleGitHubOAuth(code string) (*users_dto.OAuthCallbackResponseDTO, error) {
+	return s.handleGitHubOAuthWithEndpoint(code, github.Endpoint, "https://api.github.com/user")
+}
+
+func (s *UserService) handleGitHubOAuthWithEndpoint(
+	code string,
+	endpoint oauth2.Endpoint,
+	userAPIURL string,
+) (*users_dto.OAuthCallbackResponseDTO, error) {
+	env := config.GetEnv()
+
+	oauthConfig := &oauth2.Config{
+		ClientID:     env.GitHubClientID,
+		ClientSecret: env.GitHubClientSecret,
+		Endpoint:     endpoint,
+		Scopes:       []string{"user:email"},
+	}
+
+	token, err := oauthConfig.Exchange(context.Background(), code)
+	if err != nil {
+		return nil, fmt.Errorf("failed to exchange code: %w", err)
+	}
+
+	client := oauthConfig.Client(context.Background(), token)
+	resp, err := client.Get(userAPIURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user info: %w", err)
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("github API returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var githubUser struct {
+		ID    int64  `json:"id"`
+		Email string `json:"email"`
+		Name  string `json:"name"`
+		Login string `json:"login"`
+	}
+
+	if err := json.Unmarshal(body, &githubUser); err != nil {
+		return nil, fmt.Errorf("failed to parse user info: %w", err)
+	}
+
+	if githubUser.Email == "" {
+		return nil, errors.New("github account has no public email")
+	}
+
+	name := githubUser.Name
+	if name == "" {
+		name = githubUser.Login
+	}
+
+	oauthID := fmt.Sprintf("%d", githubUser.ID)
+	return s.getOrCreateUserFromOAuth(oauthID, githubUser.Email, name, "github")
+}
+
+func (s *UserService) HandleGoogleOAuth(code string) (*users_dto.OAuthCallbackResponseDTO, error) {
+	return s.handleGoogleOAuthWithEndpoint(code, google.Endpoint, "https://www.googleapis.com/oauth2/v2/userinfo")
+}
+
+func (s *UserService) handleGoogleOAuthWithEndpoint(
+	code string,
+	endpoint oauth2.Endpoint,
+	userAPIURL string,
+) (*users_dto.OAuthCallbackResponseDTO, error) {
+	env := config.GetEnv()
+
+	oauthConfig := &oauth2.Config{
+		ClientID:     env.GoogleClientID,
+		ClientSecret: env.GoogleClientSecret,
+		Endpoint:     endpoint,
+		Scopes: []string{
+			"https://www.googleapis.com/auth/userinfo.email",
+			"https://www.googleapis.com/auth/userinfo.profile",
+		},
+	}
+
+	token, err := oauthConfig.Exchange(context.Background(), code)
+	if err != nil {
+		return nil, fmt.Errorf("failed to exchange code: %w", err)
+	}
+
+	client := oauthConfig.Client(context.Background(), token)
+	resp, err := client.Get(userAPIURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user info: %w", err)
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("google API returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var googleUser struct {
+		ID    string `json:"id"`
+		Email string `json:"email"`
+		Name  string `json:"name"`
+	}
+
+	if err := json.Unmarshal(body, &googleUser); err != nil {
+		return nil, fmt.Errorf("failed to parse user info: %w", err)
+	}
+
+	if googleUser.Email == "" {
+		return nil, errors.New("google account has no email")
+	}
+
+	name := googleUser.Name
+	if name == "" {
+		name = "User"
+	}
+
+	return s.getOrCreateUserFromOAuth(googleUser.ID, googleUser.Email, name, "google")
+}
+
+func (s *UserService) getOrCreateUserFromOAuth(
+	oauthID, email, name, provider string,
+) (*users_dto.OAuthCallbackResponseDTO, error) {
+	var existingUser *users_models.User
+	var err error
+
+	if provider == "github" {
+		existingUser, err = s.userRepository.GetUserByGitHubOAuthID(oauthID)
+	} else {
+		existingUser, err = s.userRepository.GetUserByGoogleOAuthID(oauthID)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to check OAuth ID: %w", err)
+	}
+
+	if existingUser != nil {
+		tokenResponse, err := s.GenerateAccessToken(existingUser)
+		if err != nil {
+			return nil, err
+		}
+
+		if s.auditLogWriter != nil {
+			s.auditLogWriter.WriteAuditLog(
+				fmt.Sprintf("User signed in via %s", provider),
+				&existingUser.ID,
+				nil,
+			)
+		}
+
+		return &users_dto.OAuthCallbackResponseDTO{
+			UserID:    tokenResponse.UserID,
+			Email:     existingUser.Email,
+			Token:     tokenResponse.Token,
+			IsNewUser: false,
+		}, nil
+	}
+
+	userByEmail, err := s.userRepository.GetUserByEmail(email)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check email: %w", err)
+	}
+
+	if userByEmail != nil {
+		if userByEmail.Status == users_enums.UserStatusInvited {
+			if err := s.userRepository.UpdateUserStatus(userByEmail.ID, users_enums.UserStatusActive); err != nil {
+				return nil, fmt.Errorf("failed to activate user: %w", err)
+			}
+
+			if err := s.userRepository.UpdateUserInfo(userByEmail.ID, &name, nil); err != nil {
+				return nil, fmt.Errorf("failed to update name: %w", err)
+			}
+		}
+
+		oauthColumn := "github_oauth_id"
+		if provider == "google" {
+			oauthColumn = "google_oauth_id"
+		}
+
+		if err := s.userRepository.LinkOAuthID(userByEmail.ID, oauthColumn, oauthID); err != nil {
+			return nil, fmt.Errorf("failed to link OAuth ID: %w", err)
+		}
+
+		user, err := s.userRepository.GetUserByID(userByEmail.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get updated user: %w", err)
+		}
+
+		tokenResponse, err := s.GenerateAccessToken(user)
+		if err != nil {
+			return nil, err
+		}
+
+		if s.auditLogWriter != nil {
+			s.auditLogWriter.WriteAuditLog(
+				fmt.Sprintf("%s OAuth linked to existing account", provider),
+				&user.ID,
+				nil,
+			)
+		}
+
+		return &users_dto.OAuthCallbackResponseDTO{
+			UserID:    tokenResponse.UserID,
+			Email:     user.Email,
+			Token:     tokenResponse.Token,
+			IsNewUser: false,
+		}, nil
+	}
+
+	settings, err := s.settingsService.GetSettings()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get settings: %w", err)
+	}
+
+	if !settings.IsAllowExternalRegistrations {
+		return nil, errors.New("external registration is disabled")
+	}
+
+	basicPlan, err := s.userPlanRepository.GetPlanByType(users_enums.UserPlanTypeDefault)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get default plan: %w", err)
+	}
+
+	var planID *uuid.UUID
+	if basicPlan != nil {
+		planID = &basicPlan.ID
+	}
+
+	var githubOAuthID *string
+	var googleOAuthID *string
+	if provider == "github" {
+		githubOAuthID = &oauthID
+	} else {
+		googleOAuthID = &oauthID
+	}
+
+	newUser := &users_models.User{
+		ID:                   uuid.New(),
+		Email:                email,
+		Name:                 name,
+		HashedPassword:       nil,
+		PasswordCreationTime: time.Now().UTC(),
+		Role:                 users_enums.UserRoleMember,
+		PlanID:               planID,
+		Status:               users_enums.UserStatusActive,
+		GitHubOAuthID:        githubOAuthID,
+		GoogleOAuthID:        googleOAuthID,
+		CreatedAt:            time.Now().UTC(),
+	}
+
+	if err := s.userRepository.CreateUser(newUser); err != nil {
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	tokenResponse, err := s.GenerateAccessToken(newUser)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.auditLogWriter != nil {
+		s.auditLogWriter.WriteAuditLog(
+			fmt.Sprintf("User registered via %s OAuth: %s", provider, email),
+			&newUser.ID,
+			nil,
+		)
+	}
+
+	return &users_dto.OAuthCallbackResponseDTO{
+		UserID:    tokenResponse.UserID,
+		Email:     newUser.Email,
+		Token:     tokenResponse.Token,
+		IsNewUser: true,
+	}, nil
 }

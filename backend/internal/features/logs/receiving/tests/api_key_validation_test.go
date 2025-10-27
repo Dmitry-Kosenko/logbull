@@ -21,6 +21,7 @@ import (
 )
 
 func Test_SubmitLogs_WhenApiKeyRequired_WithValidKey_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupApiKeyTest("API Key Required Test", true)
 	apiKey := api_keys.CreateTestApiKey("Test API Key", testData.Project.ID, testData.User.Token, testData.Router)
 
@@ -32,6 +33,7 @@ func Test_SubmitLogs_WhenApiKeyRequired_WithValidKey_LogsAccepted(t *testing.T) 
 }
 
 func Test_SubmitLogs_WhenApiKeyRequired_WithoutKey_ReturnsUnauthorized(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupApiKeyTest("API Key Required No Key Test", true)
 
 	resp := submitTestLogsExpectingError(
@@ -47,6 +49,7 @@ func Test_SubmitLogs_WhenApiKeyRequired_WithoutKey_ReturnsUnauthorized(t *testin
 }
 
 func Test_SubmitLogs_WhenApiKeyRequired_WithInvalidKey_ReturnsUnauthorized(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupApiKeyTest("API Key Required Invalid Key Test", true)
 	invalidToken := generateInvalidApiKeyToken()
 
@@ -63,6 +66,7 @@ func Test_SubmitLogs_WhenApiKeyRequired_WithInvalidKey_ReturnsUnauthorized(t *te
 }
 
 func Test_SubmitLogs_WhenApiKeyRequired_WithDisabledKey_ReturnsUnauthorized(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupApiKeyTest("API Key Required Disabled Key Test", true)
 	apiKey := api_keys.CreateTestApiKey("Disabled API Key", testData.Project.ID, testData.User.Token, testData.Router)
 
@@ -81,6 +85,7 @@ func Test_SubmitLogs_WhenApiKeyRequired_WithDisabledKey_ReturnsUnauthorized(t *t
 }
 
 func Test_SubmitLogs_WhenApiKeyNotRequired_WithoutKey_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupApiKeyTest("API Key Not Required Test", false)
 
 	response := submitTestLogs(t, testData.Router, testData.Project.ID, "", testData.UniqueID)
@@ -91,6 +96,7 @@ func Test_SubmitLogs_WhenApiKeyNotRequired_WithoutKey_LogsAccepted(t *testing.T)
 }
 
 func Test_SubmitLogs_WhenApiKeyNotRequired_WithValidKey_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupApiKeyTest("API Key Not Required With Key Test", false)
 	apiKey := api_keys.CreateTestApiKey("Optional API Key", testData.Project.ID, testData.User.Token, testData.Router)
 
@@ -102,6 +108,7 @@ func Test_SubmitLogs_WhenApiKeyNotRequired_WithValidKey_LogsAccepted(t *testing.
 }
 
 func Test_SubmitLogs_WhenApiKeyNotRequired_WithInvalidKey_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupApiKeyTest("API Key Not Required Invalid Key Test", false)
 	invalidToken := generateInvalidApiKeyToken()
 
@@ -113,6 +120,7 @@ func Test_SubmitLogs_WhenApiKeyNotRequired_WithInvalidKey_LogsAccepted(t *testin
 }
 
 func Test_SubmitLogs_WhenApiKeyFromDifferentProject_ReturnsUnauthorized(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData1 := setupApiKeyTest("API Key Project 1", true)
 	testData2 := setupApiKeyTest("API Key Project 2", true)
 

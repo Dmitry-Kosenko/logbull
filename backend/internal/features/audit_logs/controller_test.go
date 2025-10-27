@@ -18,6 +18,7 @@ import (
 )
 
 func Test_GetGlobalAuditLogs_WithDifferentUserRoles_EnforcesPermissionsCorrectly(t *testing.T) {
+	users_testing.CleanupPlans()
 	adminUser := users_testing.CreateTestUser(user_enums.UserRoleAdmin)
 	memberUser := users_testing.CreateTestUser(user_enums.UserRoleMember)
 	router := createRouter()
@@ -52,6 +53,7 @@ func Test_GetGlobalAuditLogs_WithDifferentUserRoles_EnforcesPermissionsCorrectly
 }
 
 func Test_GetUserAuditLogs_WithDifferentUserRoles_EnforcesPermissionsCorrectly(t *testing.T) {
+	users_testing.CleanupPlans()
 	adminUser := users_testing.CreateTestUser(user_enums.UserRoleAdmin)
 	user1 := users_testing.CreateTestUser(user_enums.UserRoleMember)
 	user2 := users_testing.CreateTestUser(user_enums.UserRoleMember)
@@ -113,6 +115,7 @@ func Test_GetUserAuditLogs_WithDifferentUserRoles_EnforcesPermissionsCorrectly(t
 }
 
 func Test_GetGlobalAuditLogs_WithBeforeDateFilter_ReturnsFilteredLogs(t *testing.T) {
+	users_testing.CleanupPlans()
 	adminUser := users_testing.CreateTestUser(user_enums.UserRoleAdmin)
 	router := createRouter()
 	baseTime := time.Now().UTC()

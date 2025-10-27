@@ -6,6 +6,8 @@ import type { ChangePasswordRequest } from '../model/ChangePasswordRequest';
 import type { InviteUserRequest } from '../model/InviteUserRequest';
 import type { InviteUserResponse } from '../model/InviteUserResponse';
 import type { IsAdminHasPasswordResponse } from '../model/IsAdminHasPasswordResponse';
+import type { OAuthCallbackRequest } from '../model/OAuthCallbackRequest';
+import type { OAuthCallbackResponse } from '../model/OAuthCallbackResponse';
 import type { SetAdminPasswordRequest } from '../model/SetAdminPasswordRequest';
 import type { SignInRequest } from '../model/SignInRequest';
 import type { SignInResponse } from '../model/SignInResponse';
@@ -102,6 +104,34 @@ export const userApi = {
     const requestOptions: RequestOptions = new RequestOptions();
     requestOptions.setBody(JSON.stringify(request));
     return apiHelper.fetchPutJson(`${getApplicationServer()}/api/v1/users/me`, requestOptions);
+  },
+
+  async handleGitHubOAuth(request: OAuthCallbackRequest): Promise<OAuthCallbackResponse> {
+    const requestOptions: RequestOptions = new RequestOptions();
+    requestOptions.setBody(JSON.stringify(request));
+
+    return apiHelper
+      .fetchPostJson(`${getApplicationServer()}/api/v1/auth/github/callback`, requestOptions)
+      .then((response: unknown): OAuthCallbackResponse => {
+        const typedResponse = response as OAuthCallbackResponse;
+        saveAuthorizedData(typedResponse.token, typedResponse.userId);
+        notifyAuthListeners();
+        return typedResponse;
+      });
+  },
+
+  async handleGoogleOAuth(request: OAuthCallbackRequest): Promise<OAuthCallbackResponse> {
+    const requestOptions: RequestOptions = new RequestOptions();
+    requestOptions.setBody(JSON.stringify(request));
+
+    return apiHelper
+      .fetchPostJson(`${getApplicationServer()}/api/v1/auth/google/callback`, requestOptions)
+      .then((response: unknown): OAuthCallbackResponse => {
+        const typedResponse = response as OAuthCallbackResponse;
+        saveAuthorizedData(typedResponse.token, typedResponse.userId);
+        notifyAuthListeners();
+        return typedResponse;
+      });
   },
 
   isAuthorized: (): boolean => !!accessTokenHelper.getAccessToken(),

@@ -34,6 +34,11 @@ type EnvVariables struct {
 	OpenSearchURL           string `env:"OPENSEARCH_URL"            required:"true"`
 	OpenSearchAPIPort       string `env:"OPENSEARCH_API_PORT"       required:"true"`
 	OpenSearchTransportPort string `env:"OPENSEARCH_TRANSPORT_PORT" required:"true"`
+	// oauth
+	GitHubClientID     string `env:"GITHUB_CLIENT_ID"`
+	GitHubClientSecret string `env:"GITHUB_CLIENT_SECRET"`
+	GoogleClientID     string `env:"GOOGLE_CLIENT_ID"`
+	GoogleClientSecret string `env:"GOOGLE_CLIENT_SECRET"`
 }
 
 var (

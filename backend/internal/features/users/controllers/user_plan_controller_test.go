@@ -58,6 +58,7 @@ func Test_GetPlans_WhenNoPlansExist_ReturnsEmptyArray(t *testing.T) {
 }
 
 func Test_CreatePlan_WhenUserIsAdmin_PlanCreated(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := createUserPlanTestRouter()
 	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
 
@@ -85,6 +86,7 @@ func Test_CreatePlan_WhenUserIsAdmin_PlanCreated(t *testing.T) {
 }
 
 func Test_CreatePlan_WhenUserIsMember_ReturnsForbidden(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := createUserPlanTestRouter()
 	member := users_testing.CreateTestUser(users_enums.UserRoleMember)
 
@@ -146,6 +148,7 @@ func Test_CreatePlan_WithDuplicateDefaultPlan_ReturnsBadRequest(t *testing.T) {
 }
 
 func Test_CreatePlan_WithValidExtendedTypePlan_PlanCreated(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := createUserPlanTestRouter()
 	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
 
@@ -167,6 +170,7 @@ func Test_CreatePlan_WithValidExtendedTypePlan_PlanCreated(t *testing.T) {
 }
 
 func Test_CreatePlan_WithMissingRequiredFields_ReturnsBadRequest(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := createUserPlanTestRouter()
 	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
 
@@ -215,6 +219,7 @@ func Test_CreatePlan_WithMissingRequiredFields_ReturnsBadRequest(t *testing.T) {
 }
 
 func Test_UpdatePlan_WhenUserIsAdmin_PlanUpdated(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := createUserPlanTestRouter()
 	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
 
@@ -245,6 +250,7 @@ func Test_UpdatePlan_WhenUserIsAdmin_PlanUpdated(t *testing.T) {
 }
 
 func Test_UpdatePlan_PartialUpdate_OnlySpecifiedFieldsUpdated(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := createUserPlanTestRouter()
 	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
 
@@ -275,6 +281,7 @@ func Test_UpdatePlan_PartialUpdate_OnlySpecifiedFieldsUpdated(t *testing.T) {
 
 func Test_UpdatePlan_ChangingToDefaultType_WhenNoOtherDefault_Success(t *testing.T) {
 	users_testing.CleanupPlans()
+
 	router := createUserPlanTestRouter()
 	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
 
@@ -302,6 +309,7 @@ func Test_UpdatePlan_ChangingToDefaultType_WhenNoOtherDefault_Success(t *testing
 
 func Test_UpdatePlan_ChangingToDefaultType_WhenOtherDefaultExists_ReturnsBadRequest(t *testing.T) {
 	users_testing.CleanupPlans()
+
 	router := createUserPlanTestRouter()
 	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
 
@@ -329,6 +337,7 @@ func Test_UpdatePlan_ChangingToDefaultType_WhenOtherDefaultExists_ReturnsBadRequ
 }
 
 func Test_UpdatePlan_WhenUserIsMember_ReturnsForbidden(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := createUserPlanTestRouter()
 	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
 	member := users_testing.CreateTestUser(users_enums.UserRoleMember)
@@ -354,6 +363,7 @@ func Test_UpdatePlan_WhenUserIsMember_ReturnsForbidden(t *testing.T) {
 }
 
 func Test_DeletePlan_WhenUserIsAdminAndNoUsersUsingIt_PlanDeleted(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := createUserPlanTestRouter()
 	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
 
@@ -372,6 +382,7 @@ func Test_DeletePlan_WhenUserIsAdminAndNoUsersUsingIt_PlanDeleted(t *testing.T) 
 }
 
 func Test_DeletePlan_WhenUsersAreUsingPlan_ReturnsBadRequest(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := createUserPlanTestRouter()
 	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
 
@@ -393,6 +404,7 @@ func Test_DeletePlan_WhenUsersAreUsingPlan_ReturnsBadRequest(t *testing.T) {
 }
 
 func Test_DeletePlan_WhenUserIsMember_ReturnsForbidden(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := createUserPlanTestRouter()
 	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
 	member := users_testing.CreateTestUser(users_enums.UserRoleMember)
@@ -412,6 +424,7 @@ func Test_DeletePlan_WhenUserIsMember_ReturnsForbidden(t *testing.T) {
 }
 
 func Test_CreateUnlimitedPlan_PlanCreated(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := createUserPlanTestRouter()
 	admin := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
 

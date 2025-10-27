@@ -112,3 +112,14 @@ type UpdatePlanRequestDTO struct {
 type CountByPlanResponseDTO struct {
 	Count int64 `json:"count"`
 }
+
+type OAuthCallbackRequestDTO struct {
+	Code string `json:"code" binding:"required"`
+}
+
+type OAuthCallbackResponseDTO struct {
+	UserID    uuid.UUID `json:"userId"`
+	Email     string    `json:"email"`
+	Token     string    `json:"token"`
+	IsNewUser bool      `json:"isNewUser"`
+}

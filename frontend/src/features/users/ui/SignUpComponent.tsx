@@ -2,9 +2,11 @@ import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import { App, Button, Input } from 'antd';
 import { type JSX, useState } from 'react';
 
+import { IS_CLOUD } from '../../../constants';
 import { userApi } from '../../../entity/users';
 import { StringUtils } from '../../../shared/lib';
 import { FormValidator } from '../../../shared/lib/FormValidator';
+import { OauthComponent } from './OauthComponent';
 
 interface SignUpComponentProps {
   onSwitchToSignIn?: () => void;
@@ -95,6 +97,19 @@ export function SignUpComponent({ onSwitchToSignIn }: SignUpComponentProps): JSX
   return (
     <div className="w-full max-w-[300px]">
       <div className="mb-5 text-center text-2xl font-bold">Sign up</div>
+
+      <OauthComponent />
+
+      {IS_CLOUD && (
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="bg-white px-2 text-gray-500">or continue</span>
+          </div>
+        </div>
+      )}
 
       <div className="my-1 text-xs font-semibold">Your name</div>
       <Input

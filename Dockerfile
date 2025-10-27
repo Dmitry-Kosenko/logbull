@@ -212,7 +212,9 @@ cat > /app/ui/build/runtime-config.js << JSEOF
 // Runtime configuration injected at container startup
 // This file is generated dynamically and should not be edited manually
 window.__RUNTIME_CONFIG__ = {
-  IS_CLOUD: '\${IS_CLOUD:-false}'
+  IS_CLOUD: '\${IS_CLOUD:-false}',
+  GITHUB_CLIENT_ID: '\${GITHUB_CLIENT_ID:-}',
+  GOOGLE_CLIENT_ID: '\${GOOGLE_CLIENT_ID:-}'
 };
 JSEOF
 

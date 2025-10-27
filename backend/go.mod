@@ -1,6 +1,6 @@
 module logbull
 
-go 1.23.2
+go 1.24.0
 
 require (
 	github.com/gin-contrib/cors v1.7.5
@@ -19,6 +19,11 @@ require (
 	golang.org/x/time v0.12.0
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.26.1
+)
+
+require (
+	cloud.google.com/go/compute/metadata v0.3.0 // indirect
+	golang.org/x/oauth2 v0.32.0 // indirect
 )
 
 require (

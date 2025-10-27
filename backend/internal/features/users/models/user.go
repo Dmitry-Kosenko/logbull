@@ -17,6 +17,8 @@ type User struct {
 	PlanID               *uuid.UUID             `json:"planId,omitempty" gorm:"column:plan_id"`
 	Plan                 *UserPlan              `json:"plan"`
 	Status               users_enums.UserStatus `json:"status"`
+	GitHubOAuthID        *string                `json:"-"                gorm:"column:github_oauth_id"`
+	GoogleOAuthID        *string                `json:"-"                gorm:"column:google_oauth_id"`
 	CreatedAt            time.Time              `json:"createdAt"`
 }
 

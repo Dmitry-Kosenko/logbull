@@ -20,6 +20,7 @@ import (
 )
 
 func Test_SubmitLogs_WhenDomainFilterEnabled_WithAllowedDomain_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupDomainTest("Allowed Domain Test", []string{"example.com", "test.org"})
 
 	response := submitTestLogsWithOrigin(
@@ -37,6 +38,7 @@ func Test_SubmitLogs_WhenDomainFilterEnabled_WithAllowedDomain_LogsAccepted(t *t
 }
 
 func Test_SubmitLogs_WhenDomainFilterEnabled_WithDisallowedDomain_ReturnsForbidden(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupDomainTest("Disallowed Domain Test", []string{"example.com"})
 
 	resp := submitTestLogsWithOriginExpectingError(
@@ -53,6 +55,7 @@ func Test_SubmitLogs_WhenDomainFilterEnabled_WithDisallowedDomain_ReturnsForbidd
 }
 
 func Test_SubmitLogs_WhenDomainFilterEnabled_WithoutOriginHeader_ReturnsForbidden(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupDomainTest("No Origin Header Test", []string{"example.com"})
 
 	resp := submitTestLogsExpectingError(
@@ -68,6 +71,7 @@ func Test_SubmitLogs_WhenDomainFilterEnabled_WithoutOriginHeader_ReturnsForbidde
 }
 
 func Test_SubmitLogs_WhenDomainFilterEnabled_WithRefererHeader_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupDomainTest("Referer Header Test", []string{"example.com"})
 
 	response := submitTestLogsWithReferer(
@@ -85,6 +89,7 @@ func Test_SubmitLogs_WhenDomainFilterEnabled_WithRefererHeader_LogsAccepted(t *t
 }
 
 func Test_SubmitLogs_WhenDomainFilterDisabled_WithoutOriginHeader_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupDomainTest("Domain Filter Disabled Test", nil)
 
 	response := submitTestLogs(t, testData.Router, testData.Project.ID, "", testData.UniqueID)
@@ -95,6 +100,7 @@ func Test_SubmitLogs_WhenDomainFilterDisabled_WithoutOriginHeader_LogsAccepted(t
 }
 
 func Test_SubmitLogs_WhenDomainFilterEnabled_WithExactSubdomain_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupDomainTest("Exact Subdomain Test", []string{"api.example.com"})
 
 	response := submitTestLogsWithOrigin(
@@ -112,6 +118,7 @@ func Test_SubmitLogs_WhenDomainFilterEnabled_WithExactSubdomain_LogsAccepted(t *
 }
 
 func Test_SubmitLogs_WhenDomainFilterEnabled_WithMultipleDomains_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupDomainTest("Multiple Domains Test", []string{"example.com", "test.org", "domain.net"})
 
 	// Test first allowed domain
@@ -149,6 +156,7 @@ func Test_SubmitLogs_WhenDomainFilterEnabled_WithMultipleDomains_LogsAccepted(t 
 }
 
 func Test_SubmitLogs_WhenDomainFilterEnabled_WithParentDomainOnlySubdomainAllowed_ReturnsForbidden(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupDomainTest("Parent Domain With Subdomain Test", []string{"api.example.com"})
 
 	resp := submitTestLogsWithOriginExpectingError(
@@ -165,6 +173,7 @@ func Test_SubmitLogs_WhenDomainFilterEnabled_WithParentDomainOnlySubdomainAllowe
 }
 
 func Test_SubmitLogs_WhenDomainFilterEnabled_WithSubdomainOnlyParentAllowed_ReturnsForbidden(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupDomainTest("Subdomain With Parent Test", []string{"example.com"})
 
 	resp := submitTestLogsWithOriginExpectingError(
@@ -181,6 +190,7 @@ func Test_SubmitLogs_WhenDomainFilterEnabled_WithSubdomainOnlyParentAllowed_Retu
 }
 
 func Test_SubmitLogs_WhenDomainFilterEnabled_WithPortInOrigin_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupDomainTest("Port In Origin Test", []string{"localhost"})
 
 	response := submitTestLogsWithOrigin(
@@ -198,6 +208,7 @@ func Test_SubmitLogs_WhenDomainFilterEnabled_WithPortInOrigin_LogsAccepted(t *te
 }
 
 func Test_SubmitLogs_WhenDomainFilterEnabled_WithInvalidOriginFormat_ReturnsForbidden(t *testing.T) {
+	users_testing.CleanupPlans()
 	testData := setupDomainTest("Invalid Origin Format Test", []string{"example.com"})
 
 	resp := submitTestLogsWithOriginExpectingError(

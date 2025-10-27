@@ -3,6 +3,7 @@ package users_controllers
 import (
 	"net/http"
 
+	"logbull/internal/config"
 	user_dto "logbull/internal/features/users/dto"
 	user_middleware "logbull/internal/features/users/middleware"
 	users_services "logbull/internal/features/users/services"
@@ -23,6 +24,10 @@ func (c *UserController) RegisterRoutes(router *gin.RouterGroup) {
 	// Admin password setup (no auth required)
 	router.GET("/users/admin/has-password", c.IsAdminHasPassword)
 	router.POST("/users/admin/set-password", c.SetAdminPassword)
+
+	// OAuth callbacks
+	router.POST("/auth/github/callback", c.HandleGitHubOAuth)
+	router.POST("/auth/google/callback", c.HandleGoogleOAuth)
 }
 
 func (c *UserController) RegisterProtectedRoutes(router *gin.RouterGroup) {
@@ -263,4 +268,70 @@ func (c *UserController) UpdateUserInfo(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "User info updated successfully"})
+}
+
+// HandleGitHubOAuth
+// @Summary Handle GitHub OAuth callback
+// @Description Exchange GitHub authorization code for JWT token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body users_dto.OAuthCallbackRequestDTO true "OAuth callback data"
+// @Success 200 {object} users_dto.OAuthCallbackResponseDTO
+// @Failure 400 {object} map[string]string
+// @Failure 501 {object} map[string]string
+// @Router /auth/github/callback [post]
+func (c *UserController) HandleGitHubOAuth(ctx *gin.Context) {
+	env := config.GetEnv()
+	if env.GitHubClientID == "" || env.GitHubClientSecret == "" {
+		ctx.JSON(http.StatusNotImplemented, gin.H{"error": "GitHub OAuth is not configured"})
+		return
+	}
+
+	var request user_dto.OAuthCallbackRequestDTO
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	response, err := c.userService.HandleGitHubOAuth(request.Code)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+// HandleGoogleOAuth
+// @Summary Handle Google OAuth callback
+// @Description Exchange Google authorization code for JWT token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body users_dto.OAuthCallbackRequestDTO true "OAuth callback data"
+// @Success 200 {object} users_dto.OAuthCallbackResponseDTO
+// @Failure 400 {object} map[string]string
+// @Failure 501 {object} map[string]string
+// @Router /auth/google/callback [post]
+func (c *UserController) HandleGoogleOAuth(ctx *gin.Context) {
+	env := config.GetEnv()
+	if env.GoogleClientID == "" || env.GoogleClientSecret == "" {
+		ctx.JSON(http.StatusNotImplemented, gin.H{"error": "Google OAuth is not configured"})
+		return
+	}
+
+	var request user_dto.OAuthCallbackRequestDTO
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	response, err := c.userService.HandleGoogleOAuth(request.Code)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
 }

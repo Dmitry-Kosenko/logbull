@@ -17,6 +17,7 @@ import (
 // CreateApiKey Tests
 
 func Test_CreateApiKey_WhenUserIsProjectOwner_ApiKeyCreated(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -49,6 +50,7 @@ func Test_CreateApiKey_WhenUserIsProjectOwner_ApiKeyCreated(t *testing.T) {
 }
 
 func Test_CreateApiKey_WhenUserIsProjectAdmin_ApiKeyCreated(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -78,6 +80,7 @@ func Test_CreateApiKey_WhenUserIsProjectAdmin_ApiKeyCreated(t *testing.T) {
 }
 
 func Test_CreateApiKey_WhenUserIsGlobalAdmin_ApiKeyCreated(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -105,6 +108,7 @@ func Test_CreateApiKey_WhenUserIsGlobalAdmin_ApiKeyCreated(t *testing.T) {
 }
 
 func Test_CreateApiKey_WhenUserIsProjectMember_ReturnsForbidden(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -130,6 +134,7 @@ func Test_CreateApiKey_WhenUserIsProjectMember_ReturnsForbidden(t *testing.T) {
 }
 
 func Test_CreateApiKey_WhenUserIsNotProjectMember_ReturnsForbidden(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -154,6 +159,7 @@ func Test_CreateApiKey_WhenUserIsNotProjectMember_ReturnsForbidden(t *testing.T)
 }
 
 func Test_CreateApiKey_WithInvalidJSON_ReturnsBadRequest(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -173,6 +179,7 @@ func Test_CreateApiKey_WithInvalidJSON_ReturnsBadRequest(t *testing.T) {
 }
 
 func Test_CreateApiKey_WithInvalidProjectID_ReturnsBadRequest(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -197,6 +204,7 @@ func Test_CreateApiKey_WithInvalidProjectID_ReturnsBadRequest(t *testing.T) {
 // GetApiKeys Tests
 
 func Test_GetApiKeys_WhenUserIsProjectOwner_ReturnsApiKeys(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -235,6 +243,7 @@ func Test_GetApiKeys_WhenUserIsProjectOwner_ReturnsApiKeys(t *testing.T) {
 }
 
 func Test_GetApiKeys_WhenUserIsProjectMember_ReturnsApiKeys(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -260,6 +269,7 @@ func Test_GetApiKeys_WhenUserIsProjectMember_ReturnsApiKeys(t *testing.T) {
 }
 
 func Test_GetApiKeys_WhenUserIsGlobalAdmin_ReturnsApiKeys(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -284,6 +294,7 @@ func Test_GetApiKeys_WhenUserIsGlobalAdmin_ReturnsApiKeys(t *testing.T) {
 }
 
 func Test_GetApiKeys_WhenUserIsNotProjectMember_ReturnsForbidden(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -305,6 +316,7 @@ func Test_GetApiKeys_WhenUserIsNotProjectMember_ReturnsForbidden(t *testing.T) {
 // UpdateApiKey Tests
 
 func Test_UpdateApiKey_WhenUserIsProjectOwner_ApiKeyUpdated(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -332,6 +344,7 @@ func Test_UpdateApiKey_WhenUserIsProjectOwner_ApiKeyUpdated(t *testing.T) {
 }
 
 func Test_UpdateApiKey_WhenUserIsProjectAdmin_ApiKeyUpdated(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -359,6 +372,7 @@ func Test_UpdateApiKey_WhenUserIsProjectAdmin_ApiKeyUpdated(t *testing.T) {
 }
 
 func Test_UpdateApiKey_WhenUserIsProjectMember_ReturnsForbidden(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -386,6 +400,7 @@ func Test_UpdateApiKey_WhenUserIsProjectMember_ReturnsForbidden(t *testing.T) {
 }
 
 func Test_UpdateApiKey_WithNonExistentApiKey_ReturnsBadRequest(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -412,6 +427,7 @@ func Test_UpdateApiKey_WithNonExistentApiKey_ReturnsBadRequest(t *testing.T) {
 // DeleteApiKey Tests
 
 func Test_DeleteApiKey_WhenUserIsProjectOwner_ApiKeyDeleted(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -431,6 +447,7 @@ func Test_DeleteApiKey_WhenUserIsProjectOwner_ApiKeyDeleted(t *testing.T) {
 }
 
 func Test_DeleteApiKey_WhenUserIsProjectAdmin_ApiKeyDeleted(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -452,6 +469,7 @@ func Test_DeleteApiKey_WhenUserIsProjectAdmin_ApiKeyDeleted(t *testing.T) {
 }
 
 func Test_DeleteApiKey_WhenUserIsGlobalAdmin_ApiKeyDeleted(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -472,6 +490,7 @@ func Test_DeleteApiKey_WhenUserIsGlobalAdmin_ApiKeyDeleted(t *testing.T) {
 }
 
 func Test_DeleteApiKey_WhenUserIsProjectMember_ReturnsForbidden(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -493,6 +512,7 @@ func Test_DeleteApiKey_WhenUserIsProjectMember_ReturnsForbidden(t *testing.T) {
 }
 
 func Test_DeleteApiKey_WithNonExistentApiKey_ReturnsBadRequest(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -513,6 +533,7 @@ func Test_DeleteApiKey_WithNonExistentApiKey_ReturnsBadRequest(t *testing.T) {
 // Cross-project security tests
 
 func Test_UpdateApiKey_WithApiKeyFromDifferentProject_ReturnsBadRequest(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),
@@ -543,6 +564,7 @@ func Test_UpdateApiKey_WithApiKeyFromDifferentProject_ReturnsBadRequest(t *testi
 }
 
 func Test_DeleteApiKey_WithApiKeyFromDifferentProject_ReturnsBadRequest(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateApiKeyTestRouter(
 		projects_controllers.GetProjectController(),
 		projects_controllers.GetMembershipController(),

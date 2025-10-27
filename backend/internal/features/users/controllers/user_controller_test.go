@@ -1,8 +1,10 @@
 package users_controllers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	users_dto "logbull/internal/features/users/dto"
@@ -13,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/oauth2"
 )
 
 func Test_SignUpUser_WithValidData_UserCreated(t *testing.T) {
@@ -639,4 +642,337 @@ func Test_UpdateUserInfo_WhenAdminTriesToChangeEmail_ReturnsBadRequest(t *testin
 	)
 
 	assert.Contains(t, string(resp.Body), "admin email cannot be changed")
+}
+
+func Test_GitHubOAuth_WithValidCode_ReturnsToken(t *testing.T) {
+	testID := uuid.New().String()[:8]
+	testEmail := "github-user-" + testID + "@example.com"
+	testOAuthID := int64(uuid.New().ID())
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/login/oauth/access_token" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"access_token": "mock-access-token",
+				"token_type":   "bearer",
+			})
+			return
+		}
+		if r.URL.Path == "/user" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id":    testOAuthID,
+				"email": testEmail,
+				"name":  "GitHub Test User",
+				"login": "githubtest",
+			})
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer mockServer.Close()
+
+	endpoint := oauth2.Endpoint{
+		AuthURL:  mockServer.URL + "/login/oauth/authorize",
+		TokenURL: mockServer.URL + "/login/oauth/access_token",
+	}
+
+	userService := users_services.GetUserService()
+	response, err := userService.HandleGitHubOAuthWithMockEndpoint("test-code", endpoint, mockServer.URL+"/user")
+
+	assert.NoError(t, err)
+	assert.NotEmpty(t, response.Token)
+	assert.Equal(t, testEmail, response.Email)
+	assert.True(t, response.IsNewUser)
+}
+
+func Test_GitHubOAuth_WithExistingEmail_LinksAccount(t *testing.T) {
+	testID := uuid.New().String()[:8]
+	email := "existing-" + testID + "@example.com"
+	testOAuthID := int64(uuid.New().ID())
+
+	router := createUserTestRouter()
+	signupRequest := users_dto.SignUpRequestDTO{
+		Email:    email,
+		Password: "testpassword123",
+		Name:     "Existing User",
+	}
+	test_utils.MakePostRequest(t, router, "/api/v1/users/signup", "", signupRequest, http.StatusOK)
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/login/oauth/access_token" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"access_token": "mock-access-token",
+				"token_type":   "bearer",
+			})
+			return
+		}
+		if r.URL.Path == "/user" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id":    testOAuthID,
+				"email": email,
+				"name":  "GitHub Test User",
+				"login": "githubtest",
+			})
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer mockServer.Close()
+
+	endpoint := oauth2.Endpoint{
+		AuthURL:  mockServer.URL + "/login/oauth/authorize",
+		TokenURL: mockServer.URL + "/login/oauth/access_token",
+	}
+
+	userService := users_services.GetUserService()
+	response, err := userService.HandleGitHubOAuthWithMockEndpoint("test-code", endpoint, mockServer.URL+"/user")
+
+	assert.NoError(t, err)
+	assert.NotEmpty(t, response.Token)
+	assert.Equal(t, email, response.Email)
+	assert.False(t, response.IsNewUser)
+}
+
+func Test_GitHubOAuth_WithInvitedUser_ActivatesUser(t *testing.T) {
+	router := createUserTestRouter()
+	adminUser := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
+	testID := uuid.New().String()[:8]
+	email := "invited-" + testID + "@example.com"
+	testOAuthID := int64(uuid.New().ID())
+
+	inviteRequest := users_dto.InviteUserRequestDTO{
+		Email: email,
+	}
+	test_utils.MakePostRequest(
+		t,
+		router,
+		"/api/v1/users/invite",
+		"Bearer "+adminUser.Token,
+		inviteRequest,
+		http.StatusOK,
+	)
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/login/oauth/access_token" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"access_token": "mock-access-token",
+				"token_type":   "bearer",
+			})
+			return
+		}
+		if r.URL.Path == "/user" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id":    testOAuthID,
+				"email": email,
+				"name":  "GitHub Test User",
+				"login": "githubtest",
+			})
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer mockServer.Close()
+
+	endpoint := oauth2.Endpoint{
+		AuthURL:  mockServer.URL + "/login/oauth/authorize",
+		TokenURL: mockServer.URL + "/login/oauth/access_token",
+	}
+
+	userService := users_services.GetUserService()
+	response, err := userService.HandleGitHubOAuthWithMockEndpoint("test-code", endpoint, mockServer.URL+"/user")
+
+	assert.NoError(t, err)
+	assert.NotEmpty(t, response.Token)
+	assert.Equal(t, email, response.Email)
+	assert.False(t, response.IsNewUser)
+}
+
+func Test_GitHubOAuth_WhenRegistrationDisabled_ReturnsBadRequest(t *testing.T) {
+	defer users_testing.ResetSettingsToDefaults()
+	users_testing.DisableExternalRegistrations()
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/login/oauth/access_token" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"access_token": "mock-access-token",
+				"token_type":   "bearer",
+			})
+			return
+		}
+		if r.URL.Path == "/user" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id":    99999,
+				"email": "new-user-" + uuid.New().String()[:8] + "@example.com",
+				"name":  "GitHub Test User",
+				"login": "githubtest",
+			})
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer mockServer.Close()
+
+	endpoint := oauth2.Endpoint{
+		AuthURL:  mockServer.URL + "/login/oauth/authorize",
+		TokenURL: mockServer.URL + "/login/oauth/access_token",
+	}
+
+	userService := users_services.GetUserService()
+	response, err := userService.HandleGitHubOAuthWithMockEndpoint("test-code", endpoint, mockServer.URL+"/user")
+
+	assert.Error(t, err)
+	assert.Nil(t, response)
+	assert.Contains(t, err.Error(), "registration is disabled")
+}
+
+func Test_GoogleOAuth_WithValidCode_ReturnsToken(t *testing.T) {
+	testID := uuid.New().String()[:8]
+	testEmail := "google-user-" + testID + "@example.com"
+	testOAuthID := "google-" + testID
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/token" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"access_token": "mock-access-token",
+				"token_type":   "Bearer",
+			})
+			return
+		}
+		if r.URL.Path == "/userinfo" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id":    testOAuthID,
+				"email": testEmail,
+				"name":  "Google Test User",
+			})
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer mockServer.Close()
+
+	endpoint := oauth2.Endpoint{
+		AuthURL:  mockServer.URL + "/auth",
+		TokenURL: mockServer.URL + "/token",
+	}
+
+	userService := users_services.GetUserService()
+	response, err := userService.HandleGoogleOAuthWithMockEndpoint("test-code", endpoint, mockServer.URL+"/userinfo")
+
+	assert.NoError(t, err)
+	assert.NotEmpty(t, response.Token)
+	assert.Equal(t, testEmail, response.Email)
+	assert.True(t, response.IsNewUser)
+}
+
+func Test_GoogleOAuth_WithExistingEmail_LinksAccount(t *testing.T) {
+	testID := uuid.New().String()[:8]
+	email := "existing-google-" + testID + "@example.com"
+	testOAuthID := "google-" + testID + "-456"
+
+	router := createUserTestRouter()
+	signupRequest := users_dto.SignUpRequestDTO{
+		Email:    email,
+		Password: "testpassword123",
+		Name:     "Existing User",
+	}
+	test_utils.MakePostRequest(t, router, "/api/v1/users/signup", "", signupRequest, http.StatusOK)
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/token" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"access_token": "mock-access-token",
+				"token_type":   "Bearer",
+			})
+			return
+		}
+		if r.URL.Path == "/userinfo" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id":    testOAuthID,
+				"email": email,
+				"name":  "Google Test User",
+			})
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer mockServer.Close()
+
+	endpoint := oauth2.Endpoint{
+		AuthURL:  mockServer.URL + "/auth",
+		TokenURL: mockServer.URL + "/token",
+	}
+
+	userService := users_services.GetUserService()
+	response, err := userService.HandleGoogleOAuthWithMockEndpoint("test-code", endpoint, mockServer.URL+"/userinfo")
+
+	assert.NoError(t, err)
+	assert.NotEmpty(t, response.Token)
+	assert.Equal(t, email, response.Email)
+	assert.False(t, response.IsNewUser)
+}
+
+func Test_GoogleOAuth_WithInvitedUser_ActivatesUser(t *testing.T) {
+	router := createUserTestRouter()
+	adminUser := users_testing.CreateTestUser(users_enums.UserRoleAdmin)
+	testID := uuid.New().String()[:8]
+	email := "invited-google-" + testID + "@example.com"
+	testOAuthID := "google-" + testID + "-789"
+
+	inviteRequest := users_dto.InviteUserRequestDTO{
+		Email: email,
+	}
+	test_utils.MakePostRequest(
+		t,
+		router,
+		"/api/v1/users/invite",
+		"Bearer "+adminUser.Token,
+		inviteRequest,
+		http.StatusOK,
+	)
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/token" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"access_token": "mock-access-token",
+				"token_type":   "Bearer",
+			})
+			return
+		}
+		if r.URL.Path == "/userinfo" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id":    testOAuthID,
+				"email": email,
+				"name":  "Google Test User",
+			})
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer mockServer.Close()
+
+	endpoint := oauth2.Endpoint{
+		AuthURL:  mockServer.URL + "/auth",
+		TokenURL: mockServer.URL + "/token",
+	}
+
+	userService := users_services.GetUserService()
+	response, err := userService.HandleGoogleOAuthWithMockEndpoint("test-code", endpoint, mockServer.URL+"/userinfo")
+
+	assert.NoError(t, err)
+	assert.NotEmpty(t, response.Token)
+	assert.Equal(t, email, response.Email)
+	assert.False(t, response.IsNewUser)
 }

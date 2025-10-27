@@ -44,7 +44,7 @@ export function AuthPageComponent() {
           <div>
             <AuthNavbarComponent />
 
-            <div className="mt-10 flex justify-center sm:mt-[20vh]">
+            <div className="mt-10 flex justify-center sm:mt-[10vh]">
               {isAdminHasPassword ? (
                 authMode === 'signUp' ? (
                   <SignUpComponent onSwitchToSignIn={() => setAuthMode('signIn')} />

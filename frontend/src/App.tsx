@@ -5,6 +5,7 @@ import { Routes } from 'react-router';
 
 import { userApi } from './entity/users';
 import { AuthPageComponent } from './pages/AuthPageComponent';
+import { OAuthCallbackPage } from './pages/OAuthCallbackPage';
 import { MainScreenComponent } from './widgets/main';
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
       <AntdApp>
         <BrowserRouter>
           <Routes>
+            <Route path="/auth/callback" element={<OAuthCallbackPage />} />
             <Route
               path="/"
               element={!isAuthorized ? <AuthPageComponent /> : <MainScreenComponent />}

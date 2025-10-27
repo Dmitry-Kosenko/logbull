@@ -180,3 +180,34 @@ func (r *UserRepository) CountUsersByPlan(planID uuid.UUID) (int64, error) {
 
 	return count, nil
 }
+
+func (r *UserRepository) GetUserByGitHubOAuthID(githubID string) (*users_models.User, error) {
+	var user users_models.User
+	err := storage.GetDb().Preload("Plan").Where("github_oauth_id = ?", githubID).First(&user).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *UserRepository) GetUserByGoogleOAuthID(googleID string) (*users_models.User, error) {
+	var user users_models.User
+	err := storage.GetDb().Preload("Plan").Where("google_oauth_id = ?", googleID).First(&user).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *UserRepository) LinkOAuthID(userID uuid.UUID, oauthColumn, oauthID string) error {
+	updates := map[string]any{oauthColumn: oauthID}
+	return storage.GetDb().Model(&users_models.User{}).
+		Where("id = ?", userID).
+		Updates(updates).Error
+}

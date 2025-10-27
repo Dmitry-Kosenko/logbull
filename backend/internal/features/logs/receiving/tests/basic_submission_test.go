@@ -16,6 +16,7 @@ import (
 )
 
 func Test_SubmitLogs_WithValidData_LogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateLogsTestRouter()
 	user := users_testing.CreateTestUser(users_enums.UserRoleMember)
 	uniqueID := uuid.New().String()
@@ -44,6 +45,7 @@ func Test_SubmitLogs_WithValidData_LogsAccepted(t *testing.T) {
 }
 
 func Test_SubmitLogs_WithMultipleLogs_AllLogsAccepted(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateLogsTestRouter()
 	user := users_testing.CreateTestUser(users_enums.UserRoleMember)
 	uniqueID := uuid.New().String()
@@ -73,6 +75,7 @@ func Test_SubmitLogs_WithMultipleLogs_AllLogsAccepted(t *testing.T) {
 }
 
 func Test_SubmitLogs_WithEmptyBatch_ReturnsBadRequest(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateLogsTestRouter()
 	user := users_testing.CreateTestUser(users_enums.UserRoleMember)
 	uniqueID := uuid.New().String()
@@ -96,6 +99,7 @@ func Test_SubmitLogs_WithEmptyBatch_ReturnsBadRequest(t *testing.T) {
 }
 
 func Test_SubmitLogs_WithInvalidProjectID_ReturnsBadRequest(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateLogsTestRouter()
 	uniqueID := uuid.New().String()
 
@@ -117,6 +121,7 @@ func Test_SubmitLogs_WithInvalidProjectID_ReturnsBadRequest(t *testing.T) {
 }
 
 func Test_SubmitLogs_WithNonExistentProject_ReturnsNotFound(t *testing.T) {
+	users_testing.CleanupPlans()
 	router := CreateLogsTestRouter()
 	uniqueID := uuid.New().String()
 	nonExistentProjectID := uuid.New()
