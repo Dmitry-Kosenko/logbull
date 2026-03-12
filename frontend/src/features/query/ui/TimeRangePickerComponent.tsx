@@ -204,13 +204,13 @@ export const TimeRangePickerComponent = ({
   }, [selectedPreset, customRange, onGetRangeHelpers]);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-1.5">
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">Time Range</label>
+        <label className="mb-0 block text-sm font-medium text-gray-700">Time Range</label>
         <Select
           value={selectedPreset}
           onChange={handlePresetChange}
-          className="w-48"
+          className="w-full"
           suffixIcon={<ClockCircleOutlined />}
         >
           <Select.Option value="custom">Custom Range</Select.Option>
@@ -225,7 +225,7 @@ export const TimeRangePickerComponent = ({
 
       {selectedPreset === 'custom' && (
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">
+          <label className="mb-0 block text-sm font-medium text-gray-700">
             Select Custom Time Range
           </label>
           <RangePicker
@@ -242,7 +242,7 @@ export const TimeRangePickerComponent = ({
               handleCustomRangeChange(validDates);
             }}
             placeholder={['Start time', 'End time']}
-            className="w-96"
+            className="w-full"
           />
         </div>
       )}

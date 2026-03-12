@@ -1,5 +1,5 @@
-import { LoadingOutlined, PlayCircleOutlined } from '@ant-design/icons';
-import { App, Button, Divider, Spin, Switch } from 'antd';
+import { PlayCircleOutlined } from '@ant-design/icons';
+import { App, Button, Radio } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
 
 import type { Project } from '../../../entity/projects';
@@ -465,7 +465,7 @@ export const QueryComponentComponent = ({
   return (
     <div
       ref={containerRef}
-      className="ml-3 w-full space-y-3 overflow-y-auto"
+      className="ml-3 w-full space-y-3 overflow-y-auto pr-1"
       style={{ height: contentHeight }}
     >
       <FloatingTopButtonComponent containerRef={containerRef} />
@@ -473,95 +473,80 @@ export const QueryComponentComponent = ({
       {/* Query Builder Section */}
       <div
         ref={queryBuilderRef}
-        className="w-full rounded-lg border border-gray-200 bg-white shadow-sm"
+        className="w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
       >
-        <div className="flex items-center px-6 py-4">
-          <TimeRangePickerComponent
-            onChange={() => {
-              setHasSearched(false);
-            }}
-            onGetCurrentRange={(getCurrentRange: () => TimeRange | null) => {
-              timeRangeRef.current = getCurrentRange;
-            }}
-            onGetRangeHelpers={(helpers) => {
-              timeRangeHelpersRef.current = helpers;
-            }}
-          />
+        <div className="p-5">
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_220px]">
+            <div className="min-w-0">
+              {project?.plan?.warningText && (
+                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                  {project.plan.warningText}
+                </div>
+              )}
 
-          <div className="ml-5">
-            <label className="mb-1 block text-sm font-medium text-gray-700">Sort Order</label>
-            <div className="flex items-center gap-2">
-              <span
-                className={`text-sm ${sortOrder === 'desc' ? 'text-gray-900' : 'text-gray-400'}`}
-              >
-                Newest first
-              </span>
-              <Switch
-                checked={sortOrder === 'asc'}
-                onChange={(checked) => {
-                  setSortOrder(checked ? 'asc' : 'desc');
+              <QueryBuilderComponent
+                fields={queryableFields}
+                query={currentQuery}
+                onChange={(query) => {
+                  setCurrentQuery(query);
                   setHasSearched(false);
                 }}
-                size="small"
+                onFieldSearch={searchQueryableFields}
+                trailingActions={
+                  <Button
+                    type="primary"
+                    icon={<PlayCircleOutlined />}
+                    onClick={handleExecuteOrRefresh}
+                    loading={isExecuting}
+                    className="border-emerald-600 bg-emerald-600 hover:border-emerald-700 hover:bg-emerald-700"
+                  >
+                    Execute Query
+                  </Button>
+                }
               />
-              <span
-                className={`text-sm ${sortOrder === 'asc' ? 'text-gray-900' : 'text-gray-400'}`}
-              >
-                Oldest first
-              </span>
             </div>
-          </div>
 
-          <div className="ml-auto" ref={howToSendLogsButtonRef}>
-            <Button
-              type="primary"
-              onClick={handleHowToSendLogsClick}
-              loading={isExecuting}
-              ghost
-              className="border-emerald-600 bg-emerald-600 hover:border-emerald-700 hover:bg-emerald-700"
-            >
-              How to send logs from code?
-            </Button>
-          </div>
-        </div>
-
-        {project?.plan?.warningText && (
-          <div className="ml-6 text-orange-600 opacity-60">{project.plan.warningText}</div>
-        )}
-
-        <div className="space-y-4 p-6">
-          <QueryBuilderComponent
-            fields={queryableFields}
-            query={currentQuery}
-            onChange={(query) => {
-              setCurrentQuery(query);
-              setHasSearched(false);
-            }}
-            onFieldSearch={searchQueryableFields}
-          />
-
-          <Divider />
-
-          {/* Execution Controls */}
-          <div className="flex items-center justify-between">
-            {isExecuting ? (
-              <Spin indicator={<LoadingOutlined spin />} />
-            ) : (
+            <div className="flex min-w-[200px] flex-col gap-2.5" ref={howToSendLogsButtonRef}>
               <Button
                 type="primary"
-                icon={<PlayCircleOutlined />}
-                onClick={handleExecuteOrRefresh}
-                size="large"
-                ghost={hasSearched}
-                className={`ml-auto ${
-                  hasSearched
-                    ? 'border-emerald-600 text-emerald-600 hover:border-emerald-700 hover:text-emerald-700'
-                    : 'border-emerald-600 bg-emerald-600 hover:border-emerald-700 hover:bg-emerald-700'
-                }`}
+                onClick={handleHowToSendLogsClick}
+                ghost
+                className="self-start border-emerald-600 bg-emerald-600 hover:border-emerald-700 hover:bg-emerald-700 xl:self-end"
               >
-                {hasSearched ? 'Refresh Query' : 'Execute Query'}
+                How to send logs from code?
               </Button>
-            )}
+
+              <div>
+                <TimeRangePickerComponent
+                  onChange={() => {
+                    setHasSearched(false);
+                  }}
+                  onGetCurrentRange={(getCurrentRange: () => TimeRange | null) => {
+                    timeRangeRef.current = getCurrentRange;
+                  }}
+                  onGetRangeHelpers={(helpers) => {
+                    timeRangeHelpersRef.current = helpers;
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="mb-0 block text-sm font-medium text-gray-700">
+                  Sort Order
+                </label>
+                <Radio.Group
+                  value={sortOrder}
+                  onChange={(event) => {
+                    setSortOrder(event.target.value);
+                    setHasSearched(false);
+                  }}
+                  className="flex flex-col gap-0"
+                >
+                  <Radio value="desc">Newest first</Radio>
+                  <Radio value="asc">Oldest first</Radio>
+                </Radio.Group>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Select } from 'antd';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import type {
   ConditionNode,
@@ -15,6 +15,7 @@ interface Props {
   query: QueryNode | null;
   onChange: (query: QueryNode | null) => void;
   onFieldSearch?: (searchTerm?: string) => Promise<QueryableField[]>;
+  trailingActions?: React.ReactNode;
 }
 
 export const QueryBuilderComponent = ({
@@ -22,26 +23,31 @@ export const QueryBuilderComponent = ({
   query,
   onChange,
   onFieldSearch,
+  trailingActions,
 }: Props): React.JSX.Element => {
-  const createEmptyCondition = (): QueryNode => ({
+  const createEmptyConditionNode = (): QueryNode => ({
     type: 'condition',
-    condition: {
-      field: '',
-      operator: 'equals',
-      value: '',
-    },
+    condition: createEmptyCondition(),
   });
+
+  const createEmptyCondition = (): ConditionNode => ({
+    field: '',
+    operator: 'equals',
+    value: '',
+  });
+
+  const [draftCondition, setDraftCondition] = useState<ConditionNode>(createEmptyCondition);
 
   const createLogicalGroup = (operator: LogicalOperator): QueryNode => ({
     type: 'logical',
     logic: {
       operator,
-      children: [createEmptyCondition()],
+      children: [createEmptyConditionNode()],
     },
   });
 
   const handleAddCondition = () => {
-    const newCondition = createEmptyCondition();
+    const newCondition = createEmptyConditionNode();
 
     if (!query) {
       onChange(newCondition);
@@ -190,14 +196,65 @@ export const QueryBuilderComponent = ({
     onChange(result);
   };
 
+  const handleDraftConditionChange = (updatedCondition: ConditionNode) => {
+    setDraftCondition(updatedCondition);
+
+    if (updatedCondition.field.trim() !== '') {
+      onChange({
+        type: 'condition',
+        condition: updatedCondition,
+      });
+    }
+  };
+
+  const handleClearAll = () => {
+    setDraftCondition(createEmptyCondition());
+    onChange(null);
+  };
+
+  const renderActionButtons = (isCompact = false) => (
+    <div className={`flex flex-wrap gap-2 ${isCompact ? 'justify-center' : ''}`}>
+      <Button
+        type="primary"
+        icon={<PlusOutlined />}
+        onClick={handleAddCondition}
+        size="small"
+        className="border-emerald-600 bg-emerald-600 hover:border-emerald-700 hover:bg-emerald-700"
+      >
+        Add Condition
+      </Button>
+
+      <Button size="small" icon={<PlusOutlined />} onClick={() => handleAddLogicalGroup('and')}>
+        Add AND Group
+      </Button>
+
+      <Button size="small" icon={<PlusOutlined />} onClick={() => handleAddLogicalGroup('or')}>
+        Add OR Group
+      </Button>
+
+      <Button size="small" icon={<PlusOutlined />} onClick={() => handleAddLogicalGroup('not')}>
+        Add NOT Group
+      </Button>
+
+      <Button
+        size="small"
+        onClick={handleClearAll}
+        className="border-red-500 text-red-500 hover:!border-red-600 hover:!text-red-600"
+      >
+        Clear All
+      </Button>
+    </div>
+  );
+
   const renderQueryNode = (node: QueryNode, path: number[] = [], depth = 0): React.ReactElement => {
-    const indentClass = depth > 0 ? `ml-${Math.min(depth * 4, 16)}` : '';
+    const indentation = depth > 0 ? { marginLeft: `${Math.min(depth * 16, 64)}px` } : undefined;
 
     if (node.type === 'condition') {
       return (
         <div
           key={`condition-${path.join('-')}`}
-          className={`relative max-w-[800px] ${indentClass}`}
+          className="relative w-full"
+          style={indentation}
         >
           <div className="flex items-start space-x-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
             <div className="flex-1">
@@ -230,7 +287,8 @@ export const QueryBuilderComponent = ({
       return (
         <div
           key={`logical-${path.join('-')}`}
-          className={`relative w-full max-w-[820px] ${indentClass} pr-4`}
+          className="relative w-full"
+          style={indentation}
         >
           <div className="rounded-lg border border-emerald-200 bg-white shadow-sm">
             <div className="border-b border-emerald-200 px-4 py-3">
@@ -283,10 +341,10 @@ export const QueryBuilderComponent = ({
                       size="small"
                       icon={<PlusOutlined />}
                       onClick={() => {
-                        const newCondition = createEmptyCondition();
-                        const updatedNode = {
-                          ...node,
-                          logic: {
+                         const newCondition = createEmptyConditionNode();
+                         const updatedNode = {
+                           ...node,
+                           logic: {
                             ...node.logic!,
                             children: [...node.logic!.children, newCondition],
                           },
@@ -309,51 +367,32 @@ export const QueryBuilderComponent = ({
     return <div key={`unknown-${path.join('-')}`}>Unknown node type</div>;
   };
 
-  // Always show the query builder, even with no fields - users can enter custom field names
+  useEffect(() => {
+    if (!query) {
+      setDraftCondition(createEmptyCondition());
+    }
+  }, [query]);
+
+  const renderDraftCondition = () => (
+    <div className="relative w-full">
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+        <ConditionEditorComponent
+          fields={fields}
+          condition={draftCondition}
+          onChange={handleDraftConditionChange}
+          onFieldSearch={onFieldSearch}
+        />
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-4">
-      {query ? (
-        renderQueryNode(query)
-      ) : (
-        <div className="rounded-lg border-2 border-dashed border-gray-300 py-8 text-center">
-          <p className="mb-4 text-gray-500">No query built yet</p>
-          <p className="mb-6 text-sm text-gray-400">
-            Start by adding a condition or logical group, or execute without a query to see all logs
-          </p>
-        </div>
-      )}
+      {query ? renderQueryNode(query) : renderDraftCondition()}
 
-      {/* Action Buttons */}
-      <div className="flex justify-center">
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleAddCondition}
-            className="border-emerald-600 bg-emerald-600 hover:border-emerald-700 hover:bg-emerald-700"
-          >
-            Add Condition
-          </Button>
-
-          <Button icon={<PlusOutlined />} onClick={() => handleAddLogicalGroup('and')}>
-            Add AND Group
-          </Button>
-
-          <Button icon={<PlusOutlined />} onClick={() => handleAddLogicalGroup('or')}>
-            Add OR Group
-          </Button>
-
-          <Button icon={<PlusOutlined />} onClick={() => handleAddLogicalGroup('not')}>
-            Add NOT Group
-          </Button>
-
-          {query && (
-            <Button danger onClick={() => onChange(null)}>
-              Clear All
-            </Button>
-          )}
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {renderActionButtons()}
+        {trailingActions && <div className="ml-auto">{trailingActions}</div>}
       </div>
     </div>
   );
