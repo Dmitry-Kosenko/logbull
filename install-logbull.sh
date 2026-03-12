@@ -63,7 +63,7 @@ version: "3"
 services:
   logbull:
     container_name: logbull
-    image: logbull/logbull:latest
+    image: Dmitry-Kosenko/logbull:latest
     ports:
       - "4005:4005"
     volumes:
