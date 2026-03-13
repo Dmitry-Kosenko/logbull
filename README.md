@@ -220,6 +220,22 @@ Getting started with Log Bull is simple and takes just a few minutes:
 4. **Start viewing logs**: Watch your logs stream in real-time in the Log Bull dashboard! Search by text, filter by fields, and query within specific time ranges.
 5. **Manage your setup**: Add team members, control access to projects, set API key limits, and configure domain restrictions as needed.
 
+### Grafana Deep Links
+
+You can open Log Bull from Grafana and prefill the log search screen via URL parameters:
+
+- `from` and `to`: Grafana time range values
+- `var-project`: Log Bull project UUID
+- `var-query`: URL-encoded JSON for the query tree
+- `var-sortOrder`: optional `asc` or `desc`
+- `var-limit`: optional positive integer
+
+Example:
+
+```text
+http://localhost:4005/?from=now-6h&to=now&var-project=11111111-1111-1111-1111-111111111111&var-query=%7B%22type%22%3A%22condition%22%2C%22condition%22%3A%7B%22field%22%3A%22message%22%2C%22operator%22%3A%22contains%22%2C%22value%22%3A%22error%22%7D%7D
+```
+
 ### 🔑 Resetting Admin Password
 
 If you need to reset the admin password, you can use the built-in password reset command:

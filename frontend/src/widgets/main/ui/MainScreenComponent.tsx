@@ -1,6 +1,6 @@
 import { LoadingOutlined } from '@ant-design/icons';
 import { App, Button, Spin, Tooltip } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import GitHubButton from 'react-github-btn';
 
 import { APP_VERSION } from '../../../constants';
@@ -20,6 +20,7 @@ import {
   ProjectSettingsComponent,
 } from '../../../features/projects';
 import { QueryComponentComponent } from '../../../features/query';
+import { parseGrafanaUrlState } from '../../../features/query/lib/grafanaUrlParams';
 import { SettingsComponent } from '../../../features/settings';
 import { ProfileComponent } from '../../../features/users/ui/ProfileComponent';
 import { UsersComponent } from '../../../features/users/ui/UsersComponent';
@@ -44,6 +45,10 @@ export const MainScreenComponent = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
+  const [hasResolvedInitialProject, setHasResolvedInitialProject] = useState(false);
+  const [hasShownGrafanaErrors, setHasShownGrafanaErrors] = useState(false);
+  const [hasShownGrafanaProjectError, setHasShownGrafanaProjectError] = useState(false);
+  const grafanaUrlState = useMemo(() => parseGrafanaUrlState(window.location.search), []);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -71,17 +76,47 @@ export const MainScreenComponent = () => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (grafanaUrlState.errors.length > 0 && !hasShownGrafanaErrors) {
+      grafanaUrlState.errors.forEach((error) => message.error(error));
+      setHasShownGrafanaErrors(true);
+    }
+  }, [grafanaUrlState.errors, hasShownGrafanaErrors, message]);
+
   // Set selected project if none selected and projects available
   useEffect(() => {
-    if (!selectedProject && projects.length > 0) {
-      const previouslySelectedProjectId = localStorage.getItem('selected_project_id');
-      const previouslySelectedProject = projects.find(
-        (project) => project.id === previouslySelectedProjectId,
-      );
-      const projectToSelect = previouslySelectedProject || projects[0];
-      setSelectedProject(projectToSelect);
+    if (projects.length === 0 || hasResolvedInitialProject) {
+      return;
     }
-  }, [projects, selectedProject]);
+
+    if (grafanaUrlState.projectId) {
+      const grafanaProject = projects.find((project) => project.id === grafanaUrlState.projectId);
+
+      if (grafanaProject) {
+        setSelectedProject(grafanaProject);
+      } else if (!hasShownGrafanaProjectError) {
+        message.error(`Grafana project "${grafanaUrlState.projectId}" was not found or is not accessible.`);
+        setHasShownGrafanaProjectError(true);
+      }
+
+      setHasResolvedInitialProject(true);
+      return;
+    }
+
+    const previouslySelectedProjectId = localStorage.getItem('selected_project_id');
+    const previouslySelectedProject = projects.find(
+      (project) => project.id === previouslySelectedProjectId,
+    );
+    const projectToSelect = previouslySelectedProject || projects[0];
+    setSelectedProject(projectToSelect);
+    setHasResolvedInitialProject(true);
+  }, [
+    projects,
+    hasResolvedInitialProject,
+    grafanaUrlState.projectId,
+    hasShownGrafanaProjectError,
+    message,
+  ]);
 
   // Save selected project to localStorage
   useEffect(() => {
@@ -108,6 +143,11 @@ export const MainScreenComponent = () => {
 
   const isUsedMoreThan95Percent =
     diskUsage && diskUsage.usedSpaceBytes / diskUsage.totalSpaceBytes > 0.95;
+  const activeGrafanaBootstrap =
+    grafanaUrlState.bootstrap &&
+    (!grafanaUrlState.projectId || selectedProject?.id === grafanaUrlState.projectId)
+      ? grafanaUrlState.bootstrap
+      : undefined;
 
   return (
     <>
@@ -346,6 +386,7 @@ export const MainScreenComponent = () => {
                     projectId={selectedProject.id}
                     contentHeight={contentHeight}
                     user={user}
+                    externalBootstrap={activeGrafanaBootstrap}
                   />
                 )}
               </>

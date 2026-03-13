@@ -19,11 +19,13 @@ import { OnboardingTooltipComponent } from './OnboardingTooltipComponent';
 import { QueryBuilderComponent } from './QueryBuilderComponent';
 import { QueryResultsComponent } from './QueryResultsComponent';
 import { type TimeRange, TimeRangePickerComponent } from './TimeRangePickerComponent';
+import type { GrafanaQueryBootstrap } from '../lib/grafanaUrlParams';
 
 interface Props {
   projectId: string;
   contentHeight: number;
   user?: UserProfile;
+  externalBootstrap?: GrafanaQueryBootstrap;
 }
 
 /**
@@ -64,7 +66,10 @@ export const QueryComponentComponent = ({
   projectId,
   contentHeight,
   user,
+  externalBootstrap,
 }: Props): React.JSX.Element => {
+  const DEFAULT_PAGE_SIZE = 200;
+
   // States
   const [isShowHowToSendLogsFromCode, setIsShowHowToSendLogsFromCode] = useState(false);
   const [queryableFields, setQueryableFields] = useState<QueryableField[]>([]);
@@ -76,7 +81,7 @@ export const QueryComponentComponent = ({
   const [hasExecuted, setHasExecuted] = useState(false);
   const [hasMoreResults, setHasMoreResults] = useState(false);
   const [frozenTimeRange, setFrozenTimeRange] = useState<TimeRange | null>(null);
-  const [pageSize] = useState(200);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [hasSearched, setHasSearched] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [project, setProject] = useState<Project | undefined>();
@@ -91,6 +96,7 @@ export const QueryComponentComponent = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const queryBuilderRef = useRef<HTMLDivElement>(null);
   const howToSendLogsButtonRef = useRef<HTMLDivElement>(null);
+  const timeRangePickerKey = `${projectId}-${externalBootstrap?.timeRange?.from.toISOString() ?? 'default'}-${externalBootstrap?.timeRange?.to.toISOString() ?? 'default'}`;
 
   // Functions
   const { message } = App.useApp();
@@ -401,15 +407,21 @@ export const QueryComponentComponent = ({
     const initializeProject = async () => {
       await Promise.all([loadProject(), loadQueryableFields()]);
 
-      // Load saved query for this project
-      const savedQuery = loadQueryFromStorage();
-      if (savedQuery) {
-        setCurrentQuery(savedQuery.query);
-        setSortOrder(savedQuery.sortOrder);
+      if (externalBootstrap) {
+        setCurrentQuery(externalBootstrap.query ?? null);
+        setSortOrder(externalBootstrap.sortOrder ?? 'desc');
+        setPageSize(externalBootstrap.limit ?? DEFAULT_PAGE_SIZE);
       } else {
-        // Reset to defaults for new project
-        setCurrentQuery(null);
-        setSortOrder('desc');
+        const savedQuery = loadQueryFromStorage();
+        if (savedQuery) {
+          setCurrentQuery(savedQuery.query);
+          setSortOrder(savedQuery.sortOrder);
+        } else {
+          setCurrentQuery(null);
+          setSortOrder('desc');
+        }
+
+        setPageSize(DEFAULT_PAGE_SIZE);
       }
 
       // Reset other states when switching projects
@@ -425,10 +437,14 @@ export const QueryComponentComponent = ({
     };
 
     initializeProject();
-  }, [projectId]);
+  }, [projectId, externalBootstrap]);
 
   // Auto-execute query when project is initialized
   useEffect(() => {
+    if (externalBootstrap && !externalBootstrap.autoExecute) {
+      return;
+    }
+
     if (!isInitialLoad && queryableFields.length > 0) {
       // Small delay to ensure time range picker is ready
       const timer = setTimeout(() => {
@@ -440,14 +456,14 @@ export const QueryComponentComponent = ({
 
       return () => clearTimeout(timer);
     }
-  }, [isInitialLoad, queryableFields.length]);
+  }, [isInitialLoad, queryableFields.length, externalBootstrap]);
 
   // Save query and sort order whenever they change (but not on initial load)
   useEffect(() => {
-    if (!isInitialLoad) {
+    if (!isInitialLoad && !externalBootstrap) {
       saveQueryToStorage(currentQuery, sortOrder);
     }
-  }, [currentQuery, sortOrder, projectId, isInitialLoad]);
+  }, [currentQuery, sortOrder, projectId, isInitialLoad, externalBootstrap]);
 
   // Trigger onboarding tooltip after 3 seconds for new users
   useEffect(() => {
@@ -518,6 +534,8 @@ export const QueryComponentComponent = ({
 
               <div>
                 <TimeRangePickerComponent
+                  key={timeRangePickerKey}
+                  initialRange={externalBootstrap?.timeRange ?? null}
                   onChange={() => {
                     setHasSearched(false);
                   }}

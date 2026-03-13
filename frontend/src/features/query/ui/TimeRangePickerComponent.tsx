@@ -113,16 +113,20 @@ interface Props {
   onChange: (range: TimeRange | null) => void;
   onGetCurrentRange?: (getCurrentRange: () => TimeRange | null) => void;
   onGetRangeHelpers?: (helpers: { isUntilNow: () => boolean; refreshRange: () => void }) => void;
+  initialRange?: TimeRange | null;
 }
 
 export const TimeRangePickerComponent = ({
   onChange,
   onGetCurrentRange,
   onGetRangeHelpers,
+  initialRange,
 }: Props): React.JSX.Element => {
   // States
-  const [selectedPreset, setSelectedPreset] = useState<string>('24h');
-  const [customRange, setCustomRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<string>(initialRange ? 'custom' : '24h');
+  const [customRange, setCustomRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(
+    initialRange ? [initialRange.from, initialRange.to] : null,
+  );
 
   // Get user's time format preference
   const timeFormat = useMemo(() => getUserShortTimeFormat(), []);
@@ -181,6 +185,11 @@ export const TimeRangePickerComponent = ({
 
   // useEffect hooks
   useEffect(() => {
+    if (initialRange) {
+      onChange(initialRange);
+      return;
+    }
+
     const defaultPreset = presets.find((p) => p.value === selectedPreset);
     if (defaultPreset) {
       const range = defaultPreset.getRange();
